@@ -152,7 +152,7 @@ Singleton {
     // Used while `barLeft`/`barRight` are null. `workspaces` is the strip and
     // `split` starts a new capsule; neither is a module.
     readonly property var barDefaults: ({
-        left: ["workspaces"],
+        left: ["workspaces", "coding"],
         right: ["notifications", "network", "bluetooth", "volume", "lyrics", "battery"]
     })
 

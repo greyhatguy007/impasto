@@ -49,7 +49,7 @@ Singleton {
         { id: "notifications", name: "Notifications", bar: true,  desk: false, width: 380, height: 340 },
         { id: "weather",       name: "Weather",       bar: true,  width: 380, height: 150 },
         { id: "github",        name: "GitHub",        bar: false, width: 380, height: 158 },
-        { id: "coding",        name: "Code",          bar: false, width: 380, height: 158 },
+        { id: "coding",        name: "Code",          bar: true,  width: 380, height: 158 },
         { id: "stats",         name: "System",        bar: true,  width: 380, height: 148 },
         { id: "updates",       name: "Updates",       bar: true,  width: 356, height: 132 },
         { id: "pet",           name: "Pet",           bar: true,  width: 380, height: 172 },
