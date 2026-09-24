@@ -139,6 +139,7 @@ GamesModule      1.0 bar/modules/GamesModule.qml
 NotesModule      1.0 bar/modules/NotesModule.qml
 NotificationsModule 1.0 bar/modules/NotificationsModule.qml
 ChipFace         1.0 bar/modules/ChipFace.qml
+LyricsModule     1.0 bar/modules/LyricsModule.qml
 
 SettingsWindow        1.0 settings/SettingsWindow.qml
 SettingsPanel         1.0 settings/SettingsPanel.qml

@@ -60,7 +60,8 @@ Singleton {
         { id: "photo",         name: "Photo",         bar: false, width: 356, height: 150 },
         { id: "spectrum",      name: "Spectrum",      bar: false, width: 0,   height: 0 },
         { id: "clock",         name: "Clock",         bar: false,
-          width: SettingsService.clockShowsDate ? 240 : 150, height: Theme.capsuleHeight }
+          width: SettingsService.clockShowsDate ? 240 : 150, height: Theme.capsuleHeight },
+        { id: "lyrics",        name: "Lyrics",        bar: true,  width: 300, height: 80 }
     ]
 
     function entry(id: string): var {
