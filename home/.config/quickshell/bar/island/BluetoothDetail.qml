@@ -14,6 +14,7 @@ import Quickshell
 import "../../theme"
 import "../../services"
 import "../../components"
+import "../widgets"
 
 // The list behind the Bluetooth tile. `connected` is writable on a device and
 // unpairing is its `forget()` method, so every action is one call and the
@@ -85,6 +86,27 @@ ColumnLayout {
         }
 
         Item { Layout.fillWidth: true }
+
+        // The connected device's charge, when it reports one.
+        RowLayout {
+            Layout.alignment: Qt.AlignVCenter
+            visible: BluetoothService.hasDeviceBattery
+            spacing: 6
+
+            BluetoothWidget {
+                Layout.preferredWidth: 26
+                Layout.preferredHeight: 26
+                size: 26
+            }
+
+            Text {
+                text: `${BluetoothService.deviceBatteryPercent}%`
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                font.weight: Font.DemiBold
+                color: BluetoothService.deviceTint
+            }
+        }
 
         ToggleSwitch {
             checked: BluetoothService.enabled

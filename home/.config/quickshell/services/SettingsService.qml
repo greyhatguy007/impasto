@@ -59,6 +59,9 @@ Singleton {
     readonly property alias dockLauncher: config.dockLauncher
     readonly property alias weatherPlace: config.weatherPlace
     readonly property alias githubUser: config.githubUser
+    readonly property alias leetcodeUser: config.leetcodeUser
+    readonly property alias codeforcesUser: config.codeforcesUser
+    readonly property alias codingPlatform: config.codingPlatform
     readonly property alias petStyle: config.petStyle
     readonly property alias launcherResults: config.launcherResults
     readonly property alias launcherOrder: config.launcherOrder
@@ -278,6 +281,7 @@ Singleton {
     readonly property var machineKeys: [
         "displays", "lidPolicy",
         "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
+        "leetcodeUser", "codeforcesUser",
         "doNotDisturb", "nightLight", "nightTemperature",
         "recorderAudio", "captureShape", "captureKind"
     ]
@@ -695,6 +699,13 @@ Singleton {
 
         // GitHub user for the contributions widget; empty draws nothing.
         property string githubUser: ""
+
+        // LeetCode and Codeforces handles for the practice widget. Empty
+        // draws nothing for that platform; with both set, `codingPlatform`
+        // picks which one the widget shows.
+        property string leetcodeUser: ""
+        property string codeforcesUser: ""
+        property string codingPlatform: "auto"
 
         // One of `PetService.styles`: how the pet is drawn, everywhere it is
         // drawn.

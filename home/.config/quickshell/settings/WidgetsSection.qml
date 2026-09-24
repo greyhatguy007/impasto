@@ -73,6 +73,36 @@ SettingsSection {
             }
         }
 
+        SettingGroup {
+            title: Tr.t("Practice")
+            note: Tr.t("Whose LeetCode or Codeforces year to draw.")
+            hint: Tr.t("Both are read from their public profiles, so no token or account is needed. With both handles set, the widget's switch picks which one is drawn; otherwise the one set is drawn.")
+
+            // An unknown handle keeps its last grid, so the error is shown
+            // here, on the platform being drawn.
+            SettingField {
+                label: Tr.t("LeetCode")
+                reading: CodingService.platform === "leetcode" && CodingService.userUnknown
+                    ? Tr.t("No such profile — the last grid is still showing") : ""
+                alarm: CodingService.platform === "leetcode" && CodingService.userUnknown
+                placeholder: Tr.t("Nobody yet")
+                value: SettingsService.leetcodeUser
+                onEdited: value => SettingsService.set(
+                    "leetcodeUser", value.trim().replace(/^@/, ""))
+            }
+
+            SettingField {
+                label: Tr.t("Codeforces")
+                reading: CodingService.platform === "codeforces" && CodingService.userUnknown
+                    ? Tr.t("No such profile — the last grid is still showing") : ""
+                alarm: CodingService.platform === "codeforces" && CodingService.userUnknown
+                placeholder: Tr.t("Nobody yet")
+                value: SettingsService.codeforcesUser
+                onEdited: value => SettingsService.set(
+                    "codeforcesUser", value.trim().replace(/^@/, ""))
+            }
+        }
+
         // The tiles draw the pet itself, one in each style, and blink while
         // the pointer is on them.
         SettingGroup {

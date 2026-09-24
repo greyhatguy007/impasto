@@ -13,6 +13,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Bluetooth
 
+import "../theme"
+
 // The default adapter, flattened for the control centre.
 //
 // `enabled` on the adapter is writable, so nothing shells out here: the toggle
@@ -119,7 +121,8 @@ Singleton {
         for (const device of root.connectedDevices) {
             const percent = root.batteryMap[device.address]
             if (percent !== undefined)
-                out.push({ name: device.name, address: device.address, percent: percent })
+                out.push({ name: device.name, address: device.address,
+                           percent: percent, icon: root.deviceIcon(device) })
         }
         if (out.length === 0) {
             for (const address in root.lastBattery) {
@@ -127,7 +130,8 @@ Singleton {
                 if (now - entry.at < root.memoryMs) {
                     const device = root.allDevices.find(known => known.address === address)
                     out.push({ name: device?.name ?? address, address: address,
-                               percent: entry.percent })
+                               percent: entry.percent,
+                               icon: device ? root.deviceIcon(device) : "󰂯" })
                 }
             }
         }
@@ -141,6 +145,28 @@ Singleton {
     // The weakest connected reading, 0–100.
     readonly property int deviceBatteryPercent: root.hasDeviceBattery
         ? root.deviceBatteries[0].percent : 0
+
+    // The one device's charge the widget draws: weakest first, so the headset
+    // about to run out is the one on screen.
+    readonly property var deviceBattery: root.hasDeviceBattery
+        ? root.deviceBatteries[0] : null
+
+    // Its glyph (the headset, the mouse) rather than the radio's.
+    readonly property string deviceBatteryIcon: root.deviceBattery
+        ? (root.deviceBattery.icon ?? "󰂯") : "󰂯"
+
+    // Fixed hues, as the battery widget uses: a colour means the same charge
+    // whatever the wallpaper.
+    readonly property color deviceTint: {
+        if (!root.hasDeviceBattery)
+            return Theme.indicatorDim
+        const percent = root.deviceBatteryPercent
+        if (percent <= 15)
+            return Theme.indicatorBad
+        if (percent <= 35)
+            return Theme.indicatorWarn
+        return Theme.indicatorGood
+    }
 
     function deviceBatteryName(address: string): string {
         return root.deviceBatteries.find(entry => entry.address === address)?.name ?? ""

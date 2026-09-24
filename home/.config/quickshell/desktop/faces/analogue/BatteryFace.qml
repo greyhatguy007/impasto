@@ -15,29 +15,24 @@ import "../../../services"
 import "../../../components"
 
 // A battery cell filled to the charge, with a bolt while charging. The fill
-// takes the fixed battery red when the charge is low. A Bluetooth device's
-// charge rides the reading when it is the one about to run out.
+// takes the fixed battery red when the charge is low. The laptop's cell alone;
+// a Bluetooth device's charge is the Bluetooth face's.
 Instrument {
     id: face
 
-    line: BatteryService.available || BatteryService.hasDeviceBattery
-        ? `${BatteryService.level}% · ${BatteryService.levelIsDevice
-            ? BatteryService.deviceBatteryName : BatteryService.estimate}`
+    line: BatteryService.available
+        ? `${BatteryService.percent}% · ${BatteryService.estimate}`
         : "No battery"
-    reading: BatteryService.available || BatteryService.hasDeviceBattery
-        ? `${BatteryService.level}%` : "—"
-    note: !BatteryService.available && !BatteryService.hasDeviceBattery ? "no battery"
-        : BatteryService.levelIsDevice
-        ? `${BatteryService.deviceBatteryName} · bluetooth`
-        : BatteryService.estimate
+    reading: BatteryService.available ? `${BatteryService.percent}%` : "—"
+    note: BatteryService.available ? BatteryService.estimate : "no battery"
 
     BatteryCell {
         anchors.centerIn: parent
         ink: face.ink
         size: Math.min(parent.width, parent.height / 0.48)
-        fraction: BatteryService.level / 100
+        fraction: BatteryService.percent / 100
         charging: BatteryService.charging || BatteryService.full
-        fill: BatteryService.levelLow ? BatteryService.tint : face.ink.text
+        fill: BatteryService.low ? BatteryService.tint : face.ink.text
     }
 
     WheelSetter {

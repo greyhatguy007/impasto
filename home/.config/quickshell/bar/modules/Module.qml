@@ -37,6 +37,7 @@ Item {
         bluetooth: bluetoothModule,
         weather: weatherModule,
         github: githubModule,
+        coding: codingModule,
         stats: statsModule,
         updates: updatesModule,
         pet: petModule,
@@ -65,9 +66,10 @@ Item {
     Component { id: volumeModule;     VolumeModule { compact: root.compact } }
     Component { id: brightnessModule; BrightnessModule { compact: root.compact } }
     Component { id: networkModule;    NetworkModule {} }
-    Component { id: bluetoothModule;  BluetoothModule {} }
+    Component { id: bluetoothModule;  BluetoothModule { compact: root.compact } }
     Component { id: weatherModule;    WeatherModule {} }
     Component { id: githubModule;     GithubModule {} }
+    Component { id: codingModule;     CodingModule {} }
     Component { id: statsModule;      StatsModule { compact: root.compact } }
     Component { id: updatesModule;    UpdatesModule {} }
     Component { id: petModule;        PetModule { compact: root.compact } }

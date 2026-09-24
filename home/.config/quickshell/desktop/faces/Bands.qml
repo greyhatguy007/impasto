@@ -31,6 +31,7 @@ Item {
         clock: clockBand,
         weather: weatherBand,
         github: githubBand,
+        coding: codingBand,
         notes: notesBand,
         photo: photoBand,
         spectrum: spectrumBand
@@ -181,6 +182,13 @@ Item {
         id: githubBand
 
         GithubFace { ink: root.ink; family: "8x2" }
+    }
+
+    // The whole practice year; see `CodingFace`.
+    Component {
+        id: codingBand
+
+        CodingFace { ink: root.ink; family: "8x2" }
     }
 
     // The bars in a capsule; see `SpectrumFace`.

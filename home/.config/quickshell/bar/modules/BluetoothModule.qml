@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
 // │   B L U E T O O T H   M O D U L E                                        │
-// │   bluetooth · connected devices, radio switch when open                  │
+// │   bluetooth · connected device, its charge, radio switch when open       │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -13,12 +13,17 @@ import QtQuick.Layouts
 import "../../theme"
 import "../../services"
 import "../../components"
+import "../widgets"
 
 // The chip names the connected device, so audio that fell back to the
-// speakers is visible at a glance. Pairing is not supported (no PIN agent);
-// the device list is in the control centre.
+// speakers is visible at a glance, and its ring is the device's charge —
+// the same gauge the battery widget draws, for the headset rather than the
+// laptop. Pairing is not supported (no PIN agent); the device list is in the
+// control centre.
 Item {
     id: root
+
+    property bool compact: false
 
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight
@@ -26,7 +31,20 @@ Item {
     Loader {
         id: holder
         anchors.fill: parent
-        sourceComponent: detail
+        sourceComponent: root.compact ? chip : detail
+    }
+
+    // Ring face; `ChipFace` draws the device's name beside it.
+    Component {
+        id: chip
+
+        Item {
+            BluetoothWidget {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                size: Theme.capsuleHeight
+            }
+        }
     }
 
     Component {
@@ -43,21 +61,12 @@ Item {
                 Layout.fillWidth: true
                 spacing: 13
 
-                RingIndicator {
+                // The connected device's charge, or the radio's glyph when
+                // nothing reports one.
+                BluetoothWidget {
                     Layout.preferredWidth: 44
                     Layout.preferredHeight: 44
-                    thickness: 2.5
-                    progress: 0
-                    trackColor: Theme.indicatorDim
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: BluetoothService.icon
-                        font.family: Theme.fontMono
-                        font.pixelSize: 18
-                        color: BluetoothService.enabled
-                            ? Theme.indicator : Theme.textMuted
-                    }
+                    size: 44
                 }
 
                 ColumnLayout {
@@ -79,6 +88,8 @@ Item {
                         text: {
                             if (!BluetoothService.enabled)
                                 return "Adapter off"
+                            if (BluetoothService.hasDeviceBattery)
+                                return `${BluetoothService.deviceBattery.name} · ${BluetoothService.deviceBatteryPercent}%`
                             const count = BluetoothService.connectedDevices.length
                             if (count === 0)
                                 return "On · nothing connected"
@@ -89,8 +100,19 @@ Item {
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall
-                        color: Theme.textMuted
+                        color: BluetoothService.hasDeviceBattery
+                            ? BluetoothService.deviceTint : Theme.textMuted
                     }
+                }
+
+                // The figure, so the charge reads at a glance beside the ring.
+                Text {
+                    visible: BluetoothService.hasDeviceBattery
+                    text: `${BluetoothService.deviceBatteryPercent}%`
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeMedium
+                    font.weight: Font.DemiBold
+                    color: BluetoothService.deviceTint
                 }
             }
 
@@ -103,7 +125,9 @@ Item {
                     Layout.preferredWidth: 1
                     label: "DEVICES"
                     value: `${BluetoothService.connectedDevices.length}`
-                    note: "pairing lives in the control centre"
+                    note: BluetoothService.hasDeviceBattery
+                        ? "charge shown above"
+                        : "pairing lives in the control centre"
                 }
 
                 PillButton {

@@ -21,8 +21,11 @@ Instrument {
 
     readonly property int connected: BluetoothService.connectedDevices.length
 
-    line: BluetoothService.summary
-    reading: BluetoothService.summary
+    line: BluetoothService.hasDeviceBattery
+        ? `${BluetoothService.deviceBattery.name} · ${BluetoothService.deviceBatteryPercent}%`
+        : BluetoothService.summary
+    reading: BluetoothService.hasDeviceBattery
+        ? `${BluetoothService.deviceBatteryPercent}%` : BluetoothService.summary
     note: !BluetoothService.available ? "no adapter"
         : BluetoothService.enabled
         ? (face.connected > 0 ? `${face.connected} connected` : "nothing connected") : "off"

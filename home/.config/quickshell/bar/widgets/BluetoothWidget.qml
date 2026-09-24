@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
-// │   B A T T E R Y   W I D G E T                                            │
-// │   charge as a ring · the level is the outline                            │
+// │   B L U E T O O T H   W I D G E T                                        │
+// │   device charge as a ring · the level is the outline                     │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -13,11 +13,13 @@ import "../../theme"
 import "../../services"
 import "../../components"
 
-// The outline is the charge level; the exact figure is in the island detail.
-// No background of its own: whatever hosts the ring supplies it.
+// The outline is the charge of the connected Bluetooth device that reports
+// one; the glyph says which device it is. The same gauge as `BatteryWidget`,
+// but for the headset or mouse rather than the laptop, so the two never share
+// a ring.
 //
-// The laptop's cell and nothing else. A Bluetooth device's charge is drawn by
-// `BluetoothWidget`, so the two readings never share one ring.
+// With no reading the track shows alone and the glyph is the radio's, since
+// there is nothing measured to point at.
 RingIndicator {
     id: root
 
@@ -31,18 +33,20 @@ RingIndicator {
     implicitWidth: root.size
     implicitHeight: root.size
 
-    visible: BatteryService.available
-    progress: BatteryService.percent / 100
+    progress: BluetoothService.hasDeviceBattery
+        ? BluetoothService.deviceBatteryPercent / 100 : 0
     thickness: 2.5
 
     trackColor: root.track
-    fillColor: BatteryService.tint
+    fillColor: BluetoothService.hasDeviceBattery
+        ? BluetoothService.deviceTint : root.track
 
     Behavior on fillColor { ColorAnimation { duration: Theme.durationMedium } }
 
     Text {
         anchors.centerIn: parent
-        text: BatteryService.icon
+        text: BluetoothService.hasDeviceBattery
+            ? BluetoothService.deviceBatteryIcon : BluetoothService.icon
         font.family: Theme.fontMono
         font.pixelSize: Math.round(root.size * 0.38)
         // The ring carries the level; the glyph only says what is measured.

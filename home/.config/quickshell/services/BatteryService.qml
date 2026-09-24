@@ -17,11 +17,10 @@ import "../theme"
 
 // Battery state, pushed by UPower rather than polled out of sysfs.
 //
-// A Bluetooth device that reports its own battery is folded into the same
-// figures: the laptop battery is `available`, the device battery rides beside
-// it (`hasDeviceBattery`, `deviceBatteryPercent`), and `level`/`icon` show the
-// weaker of the two so the ring always tells the charge about to run out
-// first.
+// This is the laptop's cell alone. A Bluetooth device that reports its own
+// charge is the Bluetooth widget's business (`BluetoothService`), so the two
+// readings never mix: the number and the ring here always describe the battery
+// that ends the session.
 Singleton {
     id: root
 
@@ -45,24 +44,11 @@ Singleton {
         "󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"
     ]
 
-    // A connected headset drawn as headphones with its own ring: the level
-    // travels in `deviceLevelProgress`, not in the outline.
-    readonly property string deviceIcon: "󰋋"
-    readonly property real deviceLevelProgress: root.deviceBatteryPercent / 100
-
     // Fixed indicator hues rather than the palette, so a colour means the same
-    // charge level whatever the wallpaper. Taken against the displayed level,
-    // so a red ring means what shows is about to run out, laptop or headset.
+    // charge level whatever the wallpaper.
     readonly property color tint: {
-        if (!root.available && !root.hasDeviceBattery)
+        if (!root.available)
             return Theme.indicatorDim
-        if (root.levelIsDevice) {
-            if (root.deviceBatteryPercent <= 15)
-                return Theme.indicatorBad
-            if (root.deviceBatteryPercent <= 35)
-                return Theme.indicatorWarn
-            return Theme.indicatorGood
-        }
         if (root.charging || root.full)
             return Theme.indicatorGood
         if (root.percent <= 15)
@@ -76,37 +62,6 @@ Singleton {
     // after the charger is plugged or unplugged.
     readonly property int secondsToEmpty: root.available ? root.device.timeToEmpty : 0
     readonly property int secondsToFull: root.available ? root.device.timeToFull : 0
-
-
-    // ── BLUETOOTH DEVICE BATTERY ────────────────────────────────────────────
-    //
-    // A headset or mouse reporting its own charge. The laptop battery wins
-    // the word: it is the one that ends the session.
-
-    // The device whose battery the widget shows alongside the laptop's.
-    readonly property var deviceBattery: BluetoothService.deviceBatteries[0] ?? null
-    readonly property bool hasDeviceBattery: root.deviceBattery !== null
-    readonly property int deviceBatteryPercent: root.hasDeviceBattery
-        ? root.deviceBattery.percent : 0
-    readonly property string deviceBatteryName: root.hasDeviceBattery
-        ? root.deviceBattery.name : ""
-
-    // The figure the ring and the glyph show: the weaker of the two.
-    readonly property int level: {
-        if (!root.available)
-            return root.deviceBatteryPercent
-        if (!root.hasDeviceBattery)
-            return root.percent
-        return Math.min(root.percent, root.deviceBatteryPercent)
-    }
-
-    // True when the displayed level is the Bluetooth device's.
-    readonly property bool levelIsDevice: root.available && root.hasDeviceBattery
-        && root.deviceBatteryPercent < root.percent
-
-    // The displayed level running low, whichever battery it belongs to.
-    readonly property bool levelLow: root.levelIsDevice
-        ? root.deviceBatteryPercent <= 20 : root.low
 
     // Empty rather than "0 min" when there is no estimate.
     readonly property string estimate: {
@@ -150,8 +105,6 @@ Singleton {
     }
 
     readonly property string icon: {
-        if (root.levelIsDevice)
-            return "󰋋"
         if (!root.available)
             return "󰂑"
         if (root.charging)

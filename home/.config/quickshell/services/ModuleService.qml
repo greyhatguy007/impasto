@@ -38,7 +38,7 @@ Singleton {
     // The chip look is global (`SettingsService.chipShape`, `chipFigure`);
     // desktop faces are listed per theme in `DesktopService.faces`.
     readonly property var catalogue: [
-        { id: "media",         name: "Media",         bar: true,  width: 380, height: 150 },
+        { id: "media",         name: "Media",         bar: true,  width: 380, height: 172 },
         { id: "timer",         name: "Timer",         bar: true,  width: 348, height: 116 },
         { id: "claude",        name: "Claude",        bar: true,  width: 356, height: 150 },
         { id: "battery",       name: "Battery",       bar: true,  width: 320, height: 132 },
@@ -49,6 +49,7 @@ Singleton {
         { id: "notifications", name: "Notifications", bar: true,  desk: false, width: 380, height: 340 },
         { id: "weather",       name: "Weather",       bar: true,  width: 380, height: 150 },
         { id: "github",        name: "GitHub",        bar: false, width: 380, height: 158 },
+        { id: "coding",        name: "Code",          bar: false, width: 380, height: 158 },
         { id: "stats",         name: "System",        bar: true,  width: 380, height: 148 },
         { id: "updates",       name: "Updates",       bar: true,  width: 356, height: 132 },
         { id: "pet",           name: "Pet",           bar: true,  width: 380, height: 172 },
@@ -152,7 +153,7 @@ Singleton {
     // A state or a count (the network, the bell, the date, the pending
     // updates) has nothing to fill, so it keeps its symbol in either shape.
     readonly property var ringed: ["media", "timer", "claude", "battery", "volume",
-        "brightness", "stats", "pet"]
+        "brightness", "stats", "pet", "bluetooth"]
 
     // A piece's own shape when it has one, the bar's when it does not.
     function shapeOf(id: string, own: var): string {
@@ -428,6 +429,9 @@ Singleton {
             // False until a name is set and a grid comes back, so nothing
             // shows on an unconfigured machine.
             return GithubService.available
+        case "coding":
+            // Likewise, and only for the platform actually being drawn.
+            return CodingService.available
         case "stats":
             // The sampler runs from boot (shell.qml touches it).
             return true

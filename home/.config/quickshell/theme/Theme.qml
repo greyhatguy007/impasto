@@ -78,6 +78,16 @@ QtObject {
         "#26292e", "#0e4429", "#006d32", "#26a641", "#39d353"
     ]
 
+    // The coding graphs, same shape as GitHub's: LeetCode's amber and
+    // Codeforces' blue, fixed across palettes, with the empty step lifted off
+    // black so a cell still reads as a cell.
+    readonly property var leetcodeLevels: [
+        "#26292e", "#5c3a00", "#9a5e00", "#d48200", "#ffa116"
+    ]
+    readonly property var codeforcesLevels: [
+        "#26292e", "#123a52", "#17567a", "#1f7bab", "#45b1e8"
+    ]
+
     readonly property int paletteTransition: 260
 
     Behavior on background   { ColorAnimation { duration: root.paletteTransition } }

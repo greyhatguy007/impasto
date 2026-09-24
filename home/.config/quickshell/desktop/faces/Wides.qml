@@ -41,6 +41,7 @@ Item {
         updates: updatesWide,
         weather: weatherWide,
         github: githubWide,
+        coding: codingWide,
         stats: statsWide,
         claude: claudeWide,
         timer: timerWide,
@@ -103,12 +104,8 @@ Item {
 
             ink: root.ink
             label: "Battery"
-            reading: BatteryService.available || BatteryService.hasDeviceBattery
-                ? `${BatteryService.level}%` : "—"
-            note: !BatteryService.available && !BatteryService.hasDeviceBattery ? "no battery"
-                : BatteryService.levelIsDevice
-                ? `${BatteryService.deviceBatteryName} · bluetooth`
-                : BatteryService.estimate
+            reading: BatteryService.available ? `${BatteryService.percent}%` : "—"
+            note: BatteryService.available ? BatteryService.estimate : "no battery"
             tint: BatteryService.tint
             extraShare: 0.42
 
@@ -474,18 +471,17 @@ Item {
 
             ink: root.ink
             label: "Bluetooth"
-            reading: BluetoothService.summary
-            note: !BluetoothService.available ? "no adapter"
-                : (BluetoothService.enabled ? "adapter on" : "adapter off")
+            // The connected device's charge when it reports one, otherwise
+            // what is connected.
+            reading: BluetoothService.hasDeviceBattery
+                ? `${BluetoothService.deviceBatteryPercent}%` : BluetoothService.summary
+            note: BluetoothService.hasDeviceBattery
+                ? BluetoothService.deviceBattery.name
+                : (!BluetoothService.available ? "no adapter"
+                    : (BluetoothService.enabled ? "adapter on" : "adapter off"))
             extraShare: 0.42
 
-            Text {
-                anchors.centerIn: parent
-                text: BluetoothService.icon
-                font.family: Theme.fontMono
-                font.pixelSize: 30
-                color: BluetoothService.enabled ? root.ink.text : root.ink.muted
-            }
+            BluetoothWidget { size: 40; glyphColor: root.ink.text; track: root.ink.dim }
 
             extra: [
                 Column {
@@ -981,6 +977,13 @@ Item {
         id: githubWide
 
         GithubFace { ink: root.ink; family: "4x2" }
+    }
+
+    // Half a year of the practice wall; see `CodingFace`.
+    Component {
+        id: codingWide
+
+        CodingFace { ink: root.ink; family: "4x2" }
     }
 
     // The bars in a capsule; see `SpectrumFace`.

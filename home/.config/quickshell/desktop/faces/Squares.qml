@@ -40,6 +40,7 @@ Item {
         updates: updatesSquare,
         weather: weatherSquare,
         github: githubSquare,
+        coding: codingSquare,
         stats: statsSquare,
         claude: claudeSquare,
         timer: timerSquare,
@@ -69,14 +70,8 @@ Item {
             // Every face shows something when there is no data: widgets are
             // always drawn.
             label: "Battery"
-            reading: BatteryService.available || BatteryService.hasDeviceBattery
-                ? `${BatteryService.level}%` : "—"
-            // The device battery rides the level when it is the one about to
-            // run out; otherwise the laptop's estimate, as before.
-            note: !BatteryService.available && !BatteryService.hasDeviceBattery ? "no battery"
-                : BatteryService.levelIsDevice
-                ? `${BatteryService.deviceBatteryName} · bluetooth`
-                : BatteryService.estimate
+            reading: BatteryService.available ? `${BatteryService.percent}%` : "—"
+            note: BatteryService.available ? BatteryService.estimate : "no battery"
             tint: BatteryService.tint
 
             BatteryWidget { size: 40; glyphColor: root.ink.text; track: root.ink.dim }
@@ -184,15 +179,16 @@ Item {
 
             ink: root.ink
             label: "Bluetooth"
-            reading: BluetoothService.summary
+            // The connected device's charge when it reports one, otherwise
+            // what is connected.
+            reading: BluetoothService.hasDeviceBattery
+                ? `${BluetoothService.deviceBatteryPercent}%` : BluetoothService.summary
+            note: BluetoothService.hasDeviceBattery
+                ? BluetoothService.deviceBattery.name
+                : (!BluetoothService.available ? "no adapter"
+                    : (BluetoothService.enabled ? "adapter on" : "adapter off"))
 
-            Text {
-                anchors.centerIn: parent
-                text: BluetoothService.icon
-                font.family: Theme.fontMono
-                font.pixelSize: 30
-                color: BluetoothService.enabled ? root.ink.text : root.ink.muted
-            }
+            BluetoothWidget { size: 40; glyphColor: root.ink.text; track: root.ink.dim }
         }
     }
 
@@ -541,6 +537,13 @@ Item {
         id: githubSquare
 
         GithubFace { ink: root.ink; family: "2x2" }
+    }
+
+    // The practice wall, the same drawing in the platform's ramp.
+    Component {
+        id: codingSquare
+
+        CodingFace { ink: root.ink; family: "2x2" }
     }
 
     // Tasks left, and one line: overdue, else due today, else the next one.

@@ -31,10 +31,12 @@ Item {
     Component.onCompleted: {
         MediaService.subscribe()
         CavaService.subscribe()
+        LyricsService.subscribe()
     }
     Component.onDestruction: {
         MediaService.release()
         CavaService.release()
+        LyricsService.release()
     }
 
     function clock(seconds: real): string {
@@ -128,7 +130,7 @@ Item {
             anchors.margins: 14
             anchors.topMargin: 12
             anchors.bottomMargin: 10
-            spacing: 10
+            spacing: 8
 
             // ── NOW PLAYING ─────────────────────────────────────────────────
 
@@ -277,6 +279,31 @@ Item {
                         if (pressed)
                             MediaService.seek(event.x / seek.trackWidth)
                     }
+                }
+            }
+
+            // ── LYRICS ──────────────────────────────────────────────────────
+
+            // One line, the one being sung, centred and lit; the intro shows
+            // the first line muted instead, so the strip is never blank while
+            // a set is loading. A fixed height, so lyrics arriving do not move
+            // the transport below them.
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 20
+
+                Text {
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    text: LyricsService.display
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.weight: LyricsService.singing ? Font.DemiBold : Font.Normal
+                    color: LyricsService.singing ? Theme.indicator : Theme.textMuted
+
+                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
                 }
             }
 

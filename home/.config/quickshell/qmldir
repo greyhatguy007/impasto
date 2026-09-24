@@ -18,6 +18,7 @@ singleton BatteryService     1.0 services/BatteryService.qml
 singleton BrightnessService  1.0 services/BrightnessService.qml
 singleton OsdService         1.0 services/OsdService.qml
 singleton MediaService       1.0 services/MediaService.qml
+singleton LyricsService      1.0 services/LyricsService.qml
 singleton NotificationService 1.0 services/NotificationService.qml
 singleton FaceService        1.0 services/FaceService.qml
 singleton LockService        1.0 services/LockService.qml
@@ -51,6 +52,7 @@ singleton ClipboardService   1.0 services/ClipboardService.qml
 singleton SunsetService      1.0 services/SunsetService.qml
 singleton IdleService        1.0 services/IdleService.qml
 singleton GithubService      1.0 services/GithubService.qml
+singleton CodingService      1.0 services/CodingService.qml
 singleton PackagesService    1.0 services/PackagesService.qml
 singleton ProfileService     1.0 services/ProfileService.qml
 singleton VersionService     1.0 services/VersionService.qml
@@ -102,6 +104,7 @@ Deck             1.0 deck/Deck.qml
 DynamicIsland    1.0 bar/widgets/DynamicIsland.qml
 WorkspacesWidget 1.0 bar/widgets/WorkspacesWidget.qml
 BatteryWidget    1.0 bar/widgets/BatteryWidget.qml
+BluetoothWidget  1.0 bar/widgets/BluetoothWidget.qml
 BarZone          1.0 bar/widgets/BarZone.qml
 BarChip          1.0 bar/widgets/BarChip.qml
 
