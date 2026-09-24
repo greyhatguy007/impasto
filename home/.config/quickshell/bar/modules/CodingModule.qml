@@ -18,8 +18,15 @@ Item {
     id: root
 
     // Default implicit size for the chip view; will expand when detail is shown.
-    implicit width: Theme.capsuleHeight * 2
-    implicit height: Theme.capsuleHeight
+    implicitWidth: Theme.capsuleHeight * 2
+    implicitHeight: Theme.capsuleHeight
+
+    // The colours a cell takes, by level; the two platforms read at a glance.
+    readonly property var levels: CodingService.platform === "codeforces"
+        ? Theme.codeforcesLevels : Theme.leetcodeLevels
+
+    // Only a choice to make when both handles are set.
+    readonly property bool offersChoice: CodingService.configured.length > 1
 
     // Show detail when width exceeds threshold (i.e., when opened in the island).
     property bool showDetail: width > Theme.capsuleHeight * 3
@@ -84,38 +91,36 @@ Item {
                     color: Theme.textMuted
                 }
 
-                ComboBox {
-                    id: platformBox
-                    model: CodingService.platforms.map(function(p) { return p.label })
-                    currentIndex: CodingService.platforms.findIndex(function(p) { return p.id === CodingService.platform })
-                    onCurrentIndexChanged: CodingService.platform = CodingService.platforms[currentIndex].id
+                // Only when there is a choice to make.
+                SegmentedControl {
+                    options: CodingService.platforms.map(
+                        entry => ({ id: entry.id, label: entry.label }))
+                    current: CodingService.platform
+                    onSelected: id => CodingService.setPlatform(id)
                 }
             }
 
             ContributionGrid {
                 id: grid
                 Layout.fillWidth: true
+                Layout.fillHeight: true
+                weeks: CodingService.weeks
                 levels: root.levels
-                unit: root.unit
-                grid: CodingService.grid
-                total: CodingService.total
-                streak: CodingService.streak
-                today: CodingService.today
-                busiest: CodingService.busiest
-                // Show the age of the data.
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: {
-                        var age = Math.floor((Date.now() - CodingService.updatedAt) / 1000);
-                        if (age < 60) return "just now";
-                        if (age < 3600) return Math.floor(age / 60) + "m";
-                        if (age < 86400) return Math.floor(age / 3600) + "h";
-                        return Math.floor(age / 86400) + "d";
-                    }
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmaller
-                    color: Theme.textMuted
-                }
+                // As many recent weeks as fit the island; the full year is the
+                // widget's.
+                maxWeeks: 30
+                spacing: 3
+            }
+
+            // Shows the reading's age, since it comes from the network.
+            Text {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignRight
+                text: CodingService.age !== "" ? CodingService.age : ""
+                visible: text !== ""
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmaller
+                color: Theme.textMuted
             }
         }
     }
