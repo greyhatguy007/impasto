@@ -42,6 +42,7 @@ Item {
         updates: updatesModule,
         pet: petModule,
         games: gamesModule,
+        lyrics: lyricsModule,
         notes: notesModule,
         tasks: tasksModule,
         notifications: notificationsModule
@@ -74,6 +75,7 @@ Item {
     Component { id: updatesModule;    UpdatesModule {} }
     Component { id: petModule;        PetModule { compact: root.compact } }
     Component { id: gamesModule;      GamesModule {} }
+    Component { id: lyricsModule;     LyricsModule {} }
     Component { id: notesModule;      NotesModule {} }
     Component { id: tasksModule;      TasksModule {} }
     Component { id: notificationsModule; NotificationsModule {} }

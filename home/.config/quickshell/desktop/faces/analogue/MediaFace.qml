@@ -22,13 +22,32 @@ Instrument {
 
     readonly property bool something: MediaService.available
 
-    line: MediaService.title !== "" ? MediaService.title
+    // The line being sung, or the first while the intro plays. It takes the
+    // caption wherever the family draws one: the line under the record on a
+    // 2×2, the note beside the reading on a 4×2 and a 4×4.
+    readonly property string lyric: LyricsService.display
+
+    // The caption carries the lyric, so this face holds the two subscriptions
+    // it needs: the fetch waits for a watcher, and MPRIS position — which the
+    // line is found by — is only polled while something on screen holds a
+    // subscription.
+    Component.onCompleted: {
+        MediaService.subscribe()
+        LyricsService.subscribe()
+    }
+    Component.onDestruction: {
+        MediaService.release()
+        LyricsService.release()
+    }
+
+    line: face.lyric !== "" ? face.lyric : MediaService.title !== "" ? MediaService.title
         : (face.something ? MediaService.identity : "Nothing playing")
     reading: MediaService.title !== "" ? MediaService.title
         : (face.something ? MediaService.identity : "Nothing playing")
-    note: face.something
-        ? `${MediaService.artist !== "" ? MediaService.artist + " · " : ""}${MediaService.playing ? "playing" : "paused"}`
-        : "no player on the bus"
+    note: face.lyric !== "" ? face.lyric
+        : face.something
+            ? `${MediaService.artist !== "" ? MediaService.artist + " · " : ""}${MediaService.playing ? "playing" : "paused"}`
+            : "no player on the bus"
     filled: true
 
     Record {

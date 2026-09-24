@@ -131,6 +131,17 @@ Singleton {
                 UpdatesService.subscribe()
             else
                 UpdatesService.release()
+        } else if (id === "lyrics") {
+            // The chip's figure is the live line, and the line is found by
+            // MPRIS position, which only polls while something holds a
+            // subscription.
+            if (on) {
+                MediaService.subscribe()
+                LyricsService.subscribe()
+            } else {
+                MediaService.release()
+                LyricsService.release()
+            }
         }
     }
 
@@ -191,6 +202,9 @@ Singleton {
             return NotificationService.doNotDisturb ? "󰂛" : "󰂚"
         case "media":
             return "󰎇"
+        case "lyrics":
+            // The same mark its own detail draws.
+            return "󰎇"
         case "timer":
             return "󰔛"
         case "stats":
@@ -220,6 +234,12 @@ Singleton {
         case "media":
             return MediaService.available
                 ? (MediaService.title || MediaService.identity || "Playing") : "Nothing playing"
+        case "lyrics":
+            // The line being sung, falling back to the track so the figure is
+            // never blank while a player is up. Narrower than a line is wide,
+            // so `figureLimit` keeps it from taking the bar over.
+            return LyricsService.display !== "" ? LyricsService.display
+                : (MediaService.title || MediaService.identity || "")
         case "timer":
             return TimerService.running ? TimerService.display : "0:00"
         case "claude":
@@ -250,6 +270,8 @@ Singleton {
     function figureLimit(id: string): int {
         switch (id) {
         case "media":
+            return 150
+        case "lyrics":
             return 150
         case "network":
         case "bluetooth":
@@ -406,6 +428,10 @@ Singleton {
         case "notifications":
             return true
         case "media":
+            return MediaService.available
+        case "lyrics":
+            // A line needs a track to be syncing: title, artist and length
+            // are all the query asks the player for.
             return MediaService.available
         case "claude":
             // Reading this constructs the lazy singleton, which runs its

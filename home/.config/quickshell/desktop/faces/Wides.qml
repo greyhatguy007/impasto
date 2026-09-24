@@ -600,11 +600,28 @@ Item {
         WidgetFace {
 
             ink: root.ink
+
+            // The caption carries the line being sung, so this face holds the
+            // two subscriptions it needs: the fetch waits for a watcher, and
+            // MPRIS position — which the line is found by — is only polled
+            // while something on screen holds a subscription.
+            Component.onCompleted: {
+                MediaService.subscribe()
+                LyricsService.subscribe()
+            }
+            Component.onDestruction: {
+                MediaService.release()
+                LyricsService.release()
+            }
+
             label: MediaService.artist !== "" ? MediaService.artist : "Media"
             reading: MediaService.title !== "" ? MediaService.title
                 : (MediaService.available ? MediaService.identity : "Nothing playing")
-            note: !MediaService.available ? "no player"
-                : (MediaService.playing ? "playing" : "paused")
+            // The line being sung, or the first while the intro plays; the
+            // state it falls back to keeps the caption from going blank.
+            note: LyricsService.display !== "" ? LyricsService.display
+                : (!MediaService.available ? "no player"
+                    : (MediaService.playing ? "playing" : "paused"))
             extraShare: 0.4
 
             ClippingRectangle {

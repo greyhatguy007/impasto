@@ -20,6 +20,19 @@ Item {
     implicitWidth: column.implicitWidth + 14
     implicitHeight: Theme.capsuleHeight
 
+    // The bar and a desktop fallback both build this module, so it subscribes
+    // itself: nothing is fetched without a watcher, and MPRIS position — which
+    // the line is found by — is only polled while something holds a
+    // subscription.
+    Component.onCompleted: {
+        MediaService.subscribe()
+        LyricsService.subscribe()
+    }
+    Component.onDestruction: {
+        MediaService.release()
+        LyricsService.release()
+    }
+
     ColumnLayout {
         id: column
         anchors.verticalCenter: parent.verticalCenter

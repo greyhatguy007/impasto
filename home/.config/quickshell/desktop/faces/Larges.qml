@@ -569,6 +569,20 @@ Item {
         Item {
             // As large as the room left after the text and the transport; sized
             // to the face's width it would push both out of a square face.
+
+            // The caption carries the line being sung, so this face holds the
+            // two subscriptions it needs: the fetch waits for a watcher, and
+            // MPRIS position — which the line is found by — is only polled
+            // while something on screen holds a subscription.
+            Component.onCompleted: {
+                MediaService.subscribe()
+                LyricsService.subscribe()
+            }
+            Component.onDestruction: {
+                MediaService.release()
+                LyricsService.release()
+            }
+
             ClippingRectangle {
                 id: sleeve
 
@@ -627,7 +641,11 @@ Item {
 
                 Text {
                     Layout.fillWidth: true
-                    text: MediaService.available ? MediaService.artist : "no player"
+                    // The line being sung, or the first while the intro plays;
+                    // the artist it falls back to keeps the caption from going
+                    // blank.
+                    text: LyricsService.display !== "" ? LyricsService.display
+                        : (MediaService.available ? MediaService.artist : "no player")
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall
