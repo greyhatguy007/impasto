@@ -28,8 +28,10 @@ RingIndicator {
     implicitWidth: root.size
     implicitHeight: root.size
 
-    visible: BatteryService.available
-    progress: BatteryService.percent / 100
+    // The laptop battery, or a Bluetooth device's when that is all there is.
+    visible: BatteryService.available || BatteryService.hasDeviceBattery
+    // The weaker of the two readings, so the ring runs out first.
+    progress: BatteryService.level / 100
     thickness: 2.5
 
     trackColor: root.track
@@ -44,5 +46,20 @@ RingIndicator {
         font.pixelSize: Math.round(root.size * 0.38)
         // The ring carries the level; the glyph only says what is measured.
         color: root.glyphColor
+    }
+
+    // The Bluetooth device's own reading as a tick around the outside, so the
+    // headset is visible beside the laptop without a second widget.
+    Item {
+        anchors.fill: parent
+        visible: BatteryService.levelIsDevice
+
+        RingIndicator {
+            anchors.fill: parent
+            progress: BatteryService.deviceLevelProgress
+            thickness: 1.25
+            trackColor: "transparent"
+            fillColor: root.glyphColor
+        }
     }
 }

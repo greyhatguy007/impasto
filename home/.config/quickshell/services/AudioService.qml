@@ -52,6 +52,13 @@ Singleton {
         root.sink.audio.volume = Math.max(0, Math.min(100, percent)) / 100
     }
 
+    // The wheel and the widgets step by detents rather than to a point.
+    function stepVolume(steps: int): void {
+        if (steps === 0)
+            return
+        root.setVolume(root.volume + steps)
+    }
+
     function toggleMute(): void {
         if (!root.ready)
             return

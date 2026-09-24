@@ -16,7 +16,9 @@ import "../../components"
 import "../widgets"
 
 // The ring shows the charge; the detail adds what UPower reports beyond it:
-// time remaining, charge direction, power draw and cell health.
+// time remaining, charge direction, power draw and cell health, and the
+// battery of a Bluetooth device that reports one. The wheel steps brightness —
+// the battery itself has nothing to adjust.
 Item {
     id: root
 
@@ -24,6 +26,12 @@ Item {
 
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight
+
+    WheelSetter {
+        anchors.fill: parent
+        onUp: BrightnessService.step(steps)
+        onDown: BrightnessService.step(-steps)
+    }
 
     Loader {
         id: holder
@@ -91,6 +99,59 @@ Item {
                         font.pixelSize: Theme.fontSizeSmall
                         color: Theme.textMuted
                     }
+                }
+            }
+
+            // A Bluetooth device reporting its own charge, shown under the
+            // laptop's rather than averaged into it.
+            RowLayout {
+                Layout.fillWidth: true
+                visible: BatteryService.hasDeviceBattery
+                spacing: 13
+
+                Item {
+                    Layout.preferredWidth: 44
+                    Layout.preferredHeight: 28
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: BatteryService.deviceIcon
+                        font.family: Theme.fontMono
+                        font.pixelSize: 20
+                        color: BatteryService.tint
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: BatteryService.deviceBatteryName
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeMedium
+                        font.weight: Font.DemiBold
+                        color: Theme.text
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: `Bluetooth · ${BatteryService.deviceBatteryPercent}%`
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        color: Theme.textMuted
+                    }
+                }
+
+                Text {
+                    text: `${BatteryService.deviceBatteryPercent}%`
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeMedium
+                    font.weight: Font.DemiBold
+                    color: BatteryService.tint
                 }
             }
 

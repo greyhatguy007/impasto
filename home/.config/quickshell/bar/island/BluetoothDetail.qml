@@ -15,8 +15,13 @@ import "../../theme"
 import "../../services"
 import "../../components"
 
-// The list behind the Bluetooth tile. `connected` is writable on a device, so
-// connecting is a property assignment and the state comes back over D-Bus.
+// The list behind the Bluetooth tile. `connected` is writable on a device and
+// unpairing is its `forget()` method, so every action is one call and the
+// state comes back over D-Bus.
+//
+// Unpairing asks twice: the first tap turns the row's buttons into a
+// confirm/keep pair, the second writes. A tap anywhere else, or closing the
+// panel, puts the buttons back.
 //
 // Discovery runs only while this view exists: a lingering scan costs power and
 // floods the list.
@@ -42,7 +47,10 @@ ColumnLayout {
         if (BluetoothService.enabled)
             BluetoothService.setDiscovering(true)
     }
-    Component.onDestruction: BluetoothService.setDiscovering(false)
+    Component.onDestruction: {
+        BluetoothService.cancelForgetConnection()
+        BluetoothService.setDiscovering(false)
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -116,15 +124,38 @@ ColumnLayout {
 
             required property var modelData
 
+            // The address waiting for its second tap on Unpair.
+            readonly property bool confirming:
+                BluetoothService.confirmForgetting === entry.modelData.address
+
+            // The confirm pair needs a line more than the connect state does.
+            readonly property int rowHeight: entry.confirming ? 64 : 48
+
             width: ListView.view.width
-            height: 48
+            height: entry.rowHeight
             radius: Theme.radiusMedium
             color: entry.modelData.connected || entryMouse.containsMouse
                 ? Theme.islandSurfaceHover : Theme.islandSurface
             border.color: entry.modelData.connected ? Theme.accent : Theme.islandBorder
             border.width: 1
 
+            Behavior on height { NumberAnimation { duration: Theme.durationFast } }
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+
+            // The rest of the row connects or disconnects, and backs the ask
+            // out. Declared under the buttons, so theirs win where they overlap.
+            MouseArea {
+                id: entryMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    if (entry.confirming)
+                        BluetoothService.cancelForgetConnection()
+                    else
+                        BluetoothService.connectDevice(entry.modelData)
+                }
+            }
 
             RowLayout {
                 anchors.fill: parent
@@ -163,7 +194,8 @@ ColumnLayout {
                             const bits = []
                             bits.push(entry.modelData.connected ? "Connected"
                                 : (entry.modelData.paired ? "Paired" : "Available"))
-                            if (entry.modelData.batteryAvailable)
+                            if (entry.modelData.batteryAvailable
+                                    && (entry.modelData.connected || entry.modelData.paired))
                                 bits.push(`${Math.round(entry.modelData.battery * 100)}%`)
                             return bits.join(" · ")
                         }
@@ -174,21 +206,54 @@ ColumnLayout {
                     }
                 }
 
+                // Connect state. A connected device disconnects; everything
+                // else connects or pairs. Hidden while the confirm pair is up.
                 Text {
-                    visible: entry.modelData.connected
+                    visible: !entry.confirming && entry.modelData.connected
                     text: "󰄬"
                     font.family: Theme.fontMono
                     font.pixelSize: 13
                     color: Theme.accent
                 }
-            }
 
-            MouseArea {
-                id: entryMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: BluetoothService.connectDevice(entry.modelData)
+                IconButton {
+                    visible: !entry.confirming && !entry.modelData.connected
+                        && entry.modelData.paired
+                    icon: "󰁝"
+                    iconSize: 13
+                    onClicked: BluetoothService.connectDevice(entry.modelData)
+                }
+
+                // Unpair: any paired device. First tap asks, second tap writes.
+                IconButton {
+                    visible: !entry.confirming && entry.modelData.paired
+                    icon: "󰆴"
+                    iconSize: 13
+                    onClicked: BluetoothService.confirmForgetConnection(entry.modelData.address)
+                }
+
+                // The ask. Unpair goes red, Keep puts the buttons back.
+                Text {
+                    visible: entry.confirming
+                    text: "Unpair?"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeLabel
+                    color: Theme.textMuted
+                }
+
+                IconButton {
+                    visible: entry.confirming
+                    icon: "󰄬"
+                    iconSize: 13
+                    onClicked: BluetoothService.unpairDevice(entry.modelData)
+                }
+
+                IconButton {
+                    visible: entry.confirming
+                    icon: "󰅁"
+                    iconSize: 13
+                    onClicked: BluetoothService.cancelForgetConnection()
+                }
             }
         }
     }

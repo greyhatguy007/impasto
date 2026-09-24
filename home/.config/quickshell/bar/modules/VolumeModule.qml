@@ -16,7 +16,7 @@ import "../../components"
 
 // The ring is the level and the glyph the output device; the detail is a
 // slider and the two mutes. The ring stays white: volume is a choice, not a
-// warning.
+// warning. The wheel steps the level.
 Item {
     id: root
 
@@ -24,6 +24,12 @@ Item {
 
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight
+
+    WheelSetter {
+        anchors.fill: parent
+        onUp: AudioService.stepVolume(steps)
+        onDown: AudioService.stepVolume(-steps)
+    }
 
     Loader {
         id: holder

@@ -41,4 +41,10 @@ Instrument {
             trackColor: face.ink.raised
         }
     ]
+
+    WheelSetter {
+        anchors.fill: parent
+        onUp: AudioService.stepVolume(2)
+        onDown: AudioService.stepVolume(-2)
+    }
 }

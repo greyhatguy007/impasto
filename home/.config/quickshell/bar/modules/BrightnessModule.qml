@@ -16,7 +16,7 @@ import "../../services"
 import "../../components"
 
 // Hidden when no screen can be dimmed. The ring is white: brightness is a
-// choice, not a warning.
+// choice, not a warning. The wheel steps the focused screen.
 Item {
     id: root
 
@@ -24,6 +24,12 @@ Item {
 
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight
+
+    WheelSetter {
+        anchors.fill: parent
+        onUp: BrightnessService.step(steps)
+        onDown: BrightnessService.step(-steps)
+    }
 
     Loader {
         id: holder

@@ -103,11 +103,22 @@ Item {
 
             ink: root.ink
             label: "Battery"
-            reading: BatteryService.available ? `${BatteryService.percent}%` : "—"
-            note: BatteryService.available ? BatteryService.estimate : "no battery"
+            reading: BatteryService.available || BatteryService.hasDeviceBattery
+                ? `${BatteryService.level}%` : "—"
+            note: !BatteryService.available && !BatteryService.hasDeviceBattery ? "no battery"
+                : BatteryService.levelIsDevice
+                ? `${BatteryService.deviceBatteryName} · bluetooth`
+                : BatteryService.estimate
+            tint: BatteryService.tint
             extraShare: 0.42
 
             BatteryWidget { size: 40; glyphColor: root.ink.text; track: root.ink.dim }
+
+            WheelSetter {
+                anchors.fill: parent
+                onUp: BrightnessService.step(2)
+                onDown: BrightnessService.step(-2)
+            }
 
             extra: [
                 Column {
@@ -168,6 +179,12 @@ Item {
                 }
             }
 
+            WheelSetter {
+                anchors.fill: parent
+                onUp: AudioService.stepVolume(2)
+                onDown: AudioService.stepVolume(-2)
+            }
+
             extra: [
                 UsageBar {
                     trackColor: root.ink.raised
@@ -205,6 +222,12 @@ Item {
                     font.pixelSize: 16
                     color: root.ink.text
                 }
+            }
+
+            WheelSetter {
+                anchors.fill: parent
+                onUp: BrightnessService.step(2)
+                onDown: BrightnessService.step(-2)
             }
 
             extra: [

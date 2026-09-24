@@ -95,6 +95,7 @@ StyleSwatch      1.0 components/StyleSwatch.qml
 EditTray         1.0 components/EditTray.qml
 Sticky           1.0 components/Sticky.qml
 PopMenu          1.0 components/PopMenu.qml
+WheelSetter      1.0 components/WheelSetter.qml
 
 Bar              1.0 bar/Bar.qml
 Deck             1.0 deck/Deck.qml

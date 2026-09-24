@@ -39,4 +39,10 @@ Instrument {
             trackColor: face.ink.raised
         }
     ]
+
+    WheelSetter {
+        anchors.fill: parent
+        onUp: BrightnessService.step(2)
+        onDown: BrightnessService.step(-2)
+    }
 }

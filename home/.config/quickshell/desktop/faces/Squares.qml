@@ -69,10 +69,23 @@ Item {
             // Every face shows something when there is no data: widgets are
             // always drawn.
             label: "Battery"
-            reading: BatteryService.available ? `${BatteryService.percent}%` : "—"
-            note: BatteryService.available ? BatteryService.estimate : "no battery"
+            reading: BatteryService.available || BatteryService.hasDeviceBattery
+                ? `${BatteryService.level}%` : "—"
+            // The device battery rides the level when it is the one about to
+            // run out; otherwise the laptop's estimate, as before.
+            note: !BatteryService.available && !BatteryService.hasDeviceBattery ? "no battery"
+                : BatteryService.levelIsDevice
+                ? `${BatteryService.deviceBatteryName} · bluetooth`
+                : BatteryService.estimate
+            tint: BatteryService.tint
 
             BatteryWidget { size: 40; glyphColor: root.ink.text; track: root.ink.dim }
+
+            WheelSetter {
+                anchors.fill: parent
+                onUp: BrightnessService.step(2)
+                onDown: BrightnessService.step(-2)
+            }
         }
     }
 
@@ -101,6 +114,12 @@ Item {
                     color: AudioService.muted ? root.ink.muted : root.ink.text
                 }
             }
+
+            WheelSetter {
+                anchors.fill: parent
+                onUp: AudioService.stepVolume(2)
+                onDown: AudioService.stepVolume(-2)
+            }
         }
     }
 
@@ -128,6 +147,12 @@ Item {
                     font.pixelSize: 16
                     color: root.ink.text
                 }
+            }
+
+            WheelSetter {
+                anchors.fill: parent
+                onUp: BrightnessService.step(2)
+                onDown: BrightnessService.step(-2)
             }
         }
     }
