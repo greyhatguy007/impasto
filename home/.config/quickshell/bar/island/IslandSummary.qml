@@ -203,6 +203,30 @@ Item {
                 active: MediaService.playing
                 barColor: Theme.indicator
             }
+
+            // The pin, here where the track is named: the same door as the
+            // mark on the resting clock. Pinning ends the glance and keeps
+            // the line on the island after it.
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: SettingsService.islandLyrics && MediaService.available
+                text: "󰐃"
+                font.family: Theme.fontMono
+                font.pixelSize: 13
+                color: glancePin.containsMouse ? Theme.accent : Theme.textMuted
+
+                Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+
+                MouseArea {
+                    id: glancePin
+
+                    anchors.fill: parent
+                    anchors.margins: -8
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: islandState.setPinned(true)
+                }
+            }
         }
 
         RowLayout {

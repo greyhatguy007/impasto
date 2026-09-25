@@ -104,9 +104,10 @@ PanelWindow {
         : 0
 
     // The island's width inside the band, animated on the island's clock so
-    // the band widens with it. An OSD is wider than the clock and pushes the
-    // sides out rather than overlapping them.
+    // the band widens with it. An OSD or the pinned lyric line is wider than
+    // the clock and pushes the sides out rather than overlapping them.
     property real restWidth: island.state.layer === island.state.layerOsd
+        || island.state.layer === island.state.layerPinned
         ? Math.max(ModuleService.restWidth, island.size.width)
         : ModuleService.restWidth
 

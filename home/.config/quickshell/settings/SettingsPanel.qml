@@ -50,7 +50,7 @@ Item {
                  { id: "modules", label: Tr.t("The bar") },
                  { id: "workspaces", label: Tr.t("Workspaces") },
                  { id: "notifications", label: Tr.t("Notifications") }],
-          keywords: "bar island notch height margin width full span workspaces unified layout island bar band notification toast do not disturb silence timeout clock time date seconds format beside running modules layout left right split drag catalogue chip icon ring figure hover shape media claude battery timer volume brightness network wifi bluetooth weather stats cpu updates pet capture record screenshot buttons every screen monitors",
+          keywords: "bar island notch height margin width full span workspaces unified layout island bar band notification toast do not disturb silence timeout clock time date seconds format beside running modules layout left right split drag catalogue chip icon ring figure hover shape media claude battery timer volume brightness network wifi bluetooth weather stats cpu updates pet capture record screenshot buttons every screen monitors lyrics pin pinned line sing along karaoke marquee",
           page: barPage },
 
         { id: "widgets", category: "shell", icon: "󰕮", label: Tr.t("Desktop"),
@@ -122,8 +122,9 @@ Item {
         { id: "integrations", category: "session", icon: "󰒍", label: Tr.t("Integrations"),
           blurb: Tr.t("The services the shell speaks to, and their keys."),
           tabs: [{ id: "tasks", label: Tr.t("Tasks") },
-                 { id: "calendar", label: Tr.t("Calendar") }],
-          keywords: "integrations vikunja server api token key credential credentials sync tasks board self hosted remote account url google calendar gcal oauth client secret events agenda",
+                 { id: "calendar", label: Tr.t("Calendar") },
+                 { id: "wallpaper", label: Tr.t("Wallpaper") }],
+          keywords: "integrations vikunja server api token key credential credentials sync tasks board self hosted remote account url google calendar gcal oauth client secret events agenda wallpaper unsplash picsum photo photos gallery shuffle browse artist topic access key wallpapers provider",
           page: integrationsPage },
 
         { id: "system", category: "session", icon: "󰍛", label: Tr.t("System"),

@@ -143,6 +143,18 @@ SettingsSection {
                     onToggled: checked => SettingsService.set("islandSummary", checked)
                 }
             }
+
+            SettingRow {
+                label: Tr.t("Lyrics pinned to the island")
+                reading: SettingsService.islandLyrics
+                    ? Tr.t("While a track plays, the island holds its lyric line until unpinned")
+                    : Tr.t("The clock keeps the island")
+
+                ToggleSwitch {
+                    checked: SettingsService.islandLyrics
+                    onToggled: checked => SettingsService.set("islandLyrics", checked)
+                }
+            }
         }
 
         // ── CLOCK ───────────────────────────────────────────────────────────

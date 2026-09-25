@@ -28,6 +28,13 @@ Item {
     readonly property var activities: ModuleService.activities
     readonly property bool split: root.activities.length === 1
 
+    // Whether the pin mark is on the clock at all: the feature on, a player
+    // present, and no activity using a side of the island. The mark sits
+    // below, next to where the activities would.
+    readonly property bool canPin: SettingsService.islandLyrics
+        && MediaService.available
+        && root.activities.length === 0
+
     // A side under the pointer holds the glance off, so a click on the dot
     // never lands on a summary that opened under it.
     readonly property bool busy: leading.hovered || trailing.hovered
@@ -58,6 +65,32 @@ Item {
         visible: root.activities.length > 0
         activityId: root.split ? (root.activities[0] ?? "") : (root.activities[1] ?? "")
         part: root.split ? "figure" : "both"
+    }
+
+    // The door to the pinned lyric line, when there is nothing else at the
+    // trailing side: a pin mark that lights with the accent on hover, and
+    // pins on click. Hidden entirely with the feature off or nothing playing.
+    Text {
+        anchors.right: parent.right
+        anchors.rightMargin: 10
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.canPin
+        text: "󰐃"
+        font.family: Theme.fontMono
+        font.pixelSize: 12
+        color: mouse.containsMouse ? Theme.accent : Theme.indicatorDim
+
+        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+
+        MouseArea {
+            id: mouse
+
+            anchors.fill: parent
+            anchors.margins: -8
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: islandState.setPinned(true)
+        }
     }
 
     component Segment: Item {

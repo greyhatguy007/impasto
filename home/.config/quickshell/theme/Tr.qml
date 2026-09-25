@@ -153,6 +153,10 @@ QtObject {
             "A glance on hover": "Un vistazo al pasar el cursor",
             "Resting the pointer on the island opens it": "Dejar el cursor sobre la isla lo abre",
             "Only a click opens anything": "Solo un clic abre algo",
+            "Lyrics pinned to the island": "Letra fijada en la isla",
+            "While a track plays, the island holds its lyric line until unpinned":
+                "Mientras suena una canción, la isla muestra su línea de letra hasta quitarla",
+            "The clock keeps the island": "El reloj conserva la isla",
             "Muted": "Silenciado",
             "Cut into the top edge": "Recortada en el borde superior",
             "Floating below the top edge": "Flotando bajo el borde superior",
@@ -1003,6 +1007,36 @@ QtObject {
             "event": "evento",
             "events": "eventos",
             "(untitled event)": "(evento sin título)",
+
+            // ── WALLPAPER GALLERY ───────────────────────────────────────────
+            "Wallpaper gallery": "Galería de fondos",
+            "Photographs from Unsplash — or Picsum, free and keyless.":
+                "Fotografías de Unsplash —o Picsum, gratis y sin clave.",
+            "Browse asks the provider for pictures on the topic and fills the gallery below; pick one to fetch it into your wallpapers and apply it, and the palette follows the new picture. An access key from unsplash.com/developers turns the topic into a real search; without one, Picsum serves a curated pick and the topic only seeds it. The key is kept on this machine.":
+                "Explorar pide al proveedor imágenes del tema y llena la galería de abajo; elige una para traerla a tus fondos y aplicarla, y la paleta seguirá a la nueva imagen. Una clave de unsplash.com/developers convierte el tema en una búsqueda real; sin ella, Picsum sirve una selección curada y el tema solo la siembra. La clave se guarda en esta máquina.",
+            "Topic": "Tema",
+            "nature, fog, brutalism…": "naturaleza, niebla, brutalismo…",
+            "Access key": "Clave de acceso",
+            "Optional — from unsplash.com/developers": "Opcional: de unsplash.com/developers",
+            "Gallery": "Galería",
+            "Reaching the provider…": "Contactando con el proveedor…",
+            "The key was refused — check it and browse again":
+                "La clave fue rechazada — revísala y vuelve a explorar",
+            "No provider yet": "Aún sin proveedor",
+            "The provider did not answer": "El proveedor no respondió",
+            "Picsum — free, no key; add an Unsplash key for topics":
+                "Picsum — gratis, sin clave; añade una clave de Unsplash para temas",
+            "Unsplash — your key, your topic": "Unsplash — tu clave, tu tema",
+            "Browse to fill the gallery": "Explora para llenar la galería",
+            "Browse": "Explorar",
+            "Shuffle": "Mezclar",
+            "Fetch & apply": "Traer y aplicar",
+            "Fetching": "Traendo",
+            "Browse first, then pick": "Primero explora, luego elige",
+            "Pick a picture below": "Elige una imagen abajo",
+            "Shuffle wallpaper": "Fondo al azar",
+            "Stop fetching": "Parar la descarga",
+            "Stop": "Parar",
 
             // ── ACTIVITY ────────────────────────────────────────────────────
             "Activity": "Actividad",

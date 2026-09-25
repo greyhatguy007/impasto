@@ -119,6 +119,9 @@ Rectangle {
         summary:      { width: ModuleService.summaryWidth,
                         height: ModuleService.summaryHeight,
                         padding: 0 },
+        // The pinned lyric line: the notch's own width is what the line has
+        // to run in, so it is fixed rather than fitted to a line.
+        pinned:       { width: 280, height: Theme.capsuleHeight, padding: 0 },
         osd:          { width: 260, height: Theme.capsuleHeight, padding: 10 },
         notification: { width: 430, height: 68,                  padding: 13 },
         panel:        { width: root.panelWidth, height: root.panelHeight, padding: Theme.panelPadding }
@@ -137,6 +140,7 @@ Rectangle {
     readonly property var layerComponents: ({
         modules: restLayer,
         summary: summaryLayer,
+        pinned: pinnedLayer,
         osd: osdLayer,
         notification: notificationLayer
     })
@@ -463,6 +467,17 @@ Rectangle {
     Component {
         id: summaryLayer
         IslandSummary {}
+    }
+
+    // The lyric line, pinned. The pin lives in `IslandState`, so a panel, a
+    // notification or an OSD takes the island and the line comes back after;
+    // the line's own unpick asks here to put the clock back.
+    Component {
+        id: pinnedLayer
+
+        PinnedLyrics {
+            onUnpin: islandState.setPinned(false)
+        }
     }
 
     Component {

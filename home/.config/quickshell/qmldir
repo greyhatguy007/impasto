@@ -9,6 +9,7 @@ singleton Tr                 1.0 theme/Tr.qml
 singleton SettingsService    1.0 services/SettingsService.qml
 singleton ThemeService       1.0 services/ThemeService.qml
 singleton WallpaperService   1.0 services/WallpaperService.qml
+singleton UnsplashService    1.0 services/UnsplashService.qml
 singleton LauncherService    1.0 services/LauncherService.qml
 singleton SystemService      1.0 services/SystemService.qml
 singleton HyprlandService    1.0 services/HyprlandService.qml
@@ -114,6 +115,7 @@ BarChip          1.0 bar/widgets/BarChip.qml
 IslandState      1.0 bar/island/IslandState.qml
 IslandRest       1.0 bar/island/IslandRest.qml
 IslandSummary    1.0 bar/island/IslandSummary.qml
+PinnedLyrics     1.0 bar/island/PinnedLyrics.qml
 DetailFace       1.0 bar/island/DetailFace.qml
 OsdLayer         1.0 bar/island/OsdLayer.qml
 TimerWidget      1.0 bar/widgets/TimerWidget.qml

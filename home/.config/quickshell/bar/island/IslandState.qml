@@ -18,12 +18,14 @@ import "../../services"
 //     panel         opened by the user      until dismissed
 //     notification  something arrived       until it expires or is closed
 //     transient     volume, brightness…     shown, then expires
+//     pinned        lyrics, pinned          until unpinned
 //     summary       the pointer rests on it  until it leaves
 //     modules       nothing happening       always available
 //
 // A notification outranks a transient, which only confirms something the user
-// just did. The summary sits just above rest because it only restates what was
-// already true. Adding a layer means giving it a rank.
+// just did. The pinned lyrics sit above the summary, since a pin is a decision
+// and a glance is only a rest; a panel or a notification still takes the island
+// and the pin comes back when they go. Adding a layer means giving it a rank.
 //
 // There is one of these per screen, and only the live one arbitrates: an
 // island that is not stays at rest, whatever arrives.
@@ -40,6 +42,7 @@ QtObject {
     readonly property string layerNotification: "notification"
     readonly property string layerOsd: "osd"
     readonly property string layerPanel: "panel"
+    readonly property string layerPinned: "pinned"
     readonly property string layerSummary: "summary"
 
     // How long a transient event holds the island before it falls away.
@@ -57,6 +60,11 @@ QtObject {
     // Set by the island while the pointer has rested on it long enough.
     property bool summary: false
 
+    // Set while the user wants the lyrics pinned. Not cleared by anything but
+    // an unpick or the setting going off, so the pin survives a pause, a
+    // panel, a notification and the island moving between screens.
+    property bool pinned: false
+
     readonly property string layer: {
         if (!root.active)
             return root.layerModules
@@ -66,6 +74,8 @@ QtObject {
             return root.layerNotification
         if (root.transientActive)
             return root.layerOsd
+        if (root.pinned)
+            return root.layerPinned
         if (root.summary)
             return root.layerSummary
         return root.layerModules
@@ -119,6 +129,27 @@ QtObject {
         NotificationService.dismiss()
         root.summary = false
         root.openPanel = panel
+    }
+
+    // The pin from the lyric line's own chip, from the mark on the resting
+    // clock or from the glance. A pin without a player is refused: the line
+    // has nothing to show. A paused track is fine — the line sits where it
+    // was left.
+    function setPinned(on: bool): void {
+        if (on && !MediaService.available)
+            return
+        root.pinned = on
+    }
+
+    // The setting going off takes the pin with it, so the clock is back at
+    // once; turning it on again waits for the next pin.
+    readonly property Connections setting: Connections {
+        target: SettingsService
+
+        function onIslandLyricsChanged(): void {
+            if (!SettingsService.islandLyrics)
+                root.pinned = false
+        }
     }
 
     function close(): void {

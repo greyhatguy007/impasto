@@ -37,6 +37,7 @@ Singleton {
     readonly property alias barLeft: config.barLeft
     readonly property alias barRight: config.barRight
     readonly property alias islandSummary: config.islandSummary
+    readonly property alias islandLyrics: config.islandLyrics
     readonly property alias islandActivities: config.islandActivities
     readonly property alias chipShape: config.chipShape
     readonly property alias chipFigure: config.chipFigure
@@ -98,6 +99,8 @@ Singleton {
     readonly property alias windowShadow: config.windowShadow
     readonly property alias windowGlass: config.windowGlass
     readonly property alias wallpaperTransition: config.wallpaperTransition
+    readonly property alias unsplashQuery: config.unsplashQuery
+    readonly property alias unsplashKey: config.unsplashKey
     readonly property alias greeting: config.greeting
     readonly property alias fontFamily: config.fontFamily
     readonly property alias fontMono: config.fontMono
@@ -294,6 +297,7 @@ Singleton {
         "vikunjaUrl", "vikunjaToken", "vikunjaProject",
         "gcalClientId", "gcalClientSecret", "gcalCalendar",
         "doNotDisturb", "nightLight", "nightTemperature",
+        "unsplashQuery", "unsplashKey",
         "recorderAudio", "captureShape", "captureKind"
     ]
 
@@ -472,6 +476,16 @@ Singleton {
         // each change.
         property string wallpaperTransition: "wipe"
 
+        // ── WALLPAPER PROVIDERS ──────────────────────────────────────
+        //
+        // What the gallery in Settings → Integrations fetches. A topic is
+        // anything Unsplash's search takes ("fog", "brutalism", "coast");
+        // with no access key the gallery falls back to Picsum, which needs
+        // none, and the topic is only a seed for its random pick. The key
+        // lives with the machine, like every other credential.
+        property string unsplashQuery: "nature"
+        property string unsplashKey: ""
+
         // Row id from `ThemeService.greetings`; `random` is picked by `fa` on
         // each run.
         property string greeting: "random"
@@ -486,6 +500,11 @@ Singleton {
         // Hovering the island opens the glance; a click still opens the
         // control centre.
         property bool islandSummary: true
+
+        // Pinned lyrics: while a track plays, the resting island becomes a
+        // single time-synced line, pinned until unpinned. Turning it off
+        // brings the clock back.
+        property bool islandLyrics: false
 
         // Null means `besideDefaults`.
         property var islandActivities: null
