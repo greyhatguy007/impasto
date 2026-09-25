@@ -25,6 +25,10 @@ Item {
     property string placeholder: ""
     property string value: ""
 
+    // A token or a password: masked until the eye is pressed.
+    property bool secret: false
+    property bool revealed: false
+
     signal edited(string value)
 
     Layout.fillWidth: true
@@ -64,9 +68,12 @@ Item {
 
                 anchors.fill: parent
                 anchors.leftMargin: 10
-                anchors.rightMargin: 10
+                anchors.rightMargin: root.secret ? 32 : 10
                 verticalAlignment: TextInput.AlignVCenter
                 text: root.value
+                echoMode: root.secret && !root.revealed
+                    ? TextInput.Password : TextInput.Normal
+                passwordCharacter: "•"
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.text
@@ -86,6 +93,29 @@ Item {
                     elide: Text.ElideRight
                     font: input.font
                     color: Theme.textMuted
+                }
+            }
+
+            // The eye, only on a masked field.
+            Text {
+                anchors.right: parent.right
+                anchors.rightMargin: 9
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.secret
+                text: root.revealed ? "󰈈" : "󰈉"
+                font.family: Theme.fontMono
+                font.pixelSize: 12
+                color: eye.containsMouse ? Theme.text : Theme.textMuted
+
+                Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+
+                MouseArea {
+                    id: eye
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.revealed = !root.revealed
                 }
             }
         }

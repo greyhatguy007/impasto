@@ -48,8 +48,7 @@ Singleton {
         { id: "bluetooth",     name: "Bluetooth",     bar: true,  width: 356, height: 132 },
         { id: "notifications", name: "Notifications", bar: true,  desk: false, width: 380, height: 340 },
         { id: "weather",       name: "Weather",       bar: true,  width: 380, height: 150 },
-        { id: "github",        name: "GitHub",        bar: false, width: 380, height: 158 },
-        { id: "coding",        name: "Code",          bar: true,  width: 380, height: 158 },
+        { id: "coding",        name: "Activity",      bar: true,  width: 380, height: 158 },
         { id: "stats",         name: "System",        bar: true,  width: 380, height: 148 },
         { id: "updates",       name: "Updates",       bar: true,  width: 356, height: 132 },
         { id: "pet",           name: "Pet",           bar: true,  width: 380, height: 172 },
@@ -211,6 +210,9 @@ Singleton {
             return "󰍛"
         case "calendar":
             return "󰃭"
+        case "coding":
+            // The activity wall: the same mark its own chip draws.
+            return "󰅩"
         }
         return ""
     }
@@ -256,6 +258,8 @@ Singleton {
             return BluetoothService.summary
         case "calendar":
             return Qt.formatDate(root.today.date, "ddd d")
+        case "coding":
+            return CodingService.available ? CodingService.totalLabel : ""
         }
         return ""
     }
@@ -271,6 +275,8 @@ Singleton {
         switch (id) {
         case "media":
             return 150
+        case "coding":
+            return 60
         case "lyrics":
             return 150
         case "network":
@@ -452,12 +458,10 @@ Singleton {
         case "weather":
             // Builds the service, which runs its first fetch.
             return WeatherService.available
-        case "github":
-            // False until a name is set and a grid comes back, so nothing
-            // shows on an unconfigured machine.
-            return GithubService.available
         case "coding":
-            // Likewise, and only for the platform actually being drawn.
+            // False until a handle is set and a grid comes back for whatever
+            // the toggle is showing, so nothing shows on an unconfigured
+            // machine.
             return CodingService.available
         case "stats":
             // The sampler runs from boot (shell.qml touches it).

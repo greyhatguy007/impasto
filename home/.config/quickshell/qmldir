@@ -44,6 +44,8 @@ singleton ControlsService    1.0 services/ControlsService.qml
 singleton GamesService       1.0 services/GamesService.qml
 singleton NotesService       1.0 services/NotesService.qml
 singleton TasksService       1.0 services/TasksService.qml
+singleton VikunjaService     1.0 services/VikunjaService.qml
+singleton GCalendarService   1.0 services/GCalendarService.qml
 singleton DeckService        1.0 services/DeckService.qml
 singleton PickerService      1.0 services/PickerService.qml
 singleton CaptureService     1.0 services/CaptureService.qml
@@ -88,6 +90,7 @@ WindowsPreview   1.0 components/WindowsPreview.qml
 SettingsHero     1.0 components/SettingsHero.qml
 Avatar           1.0 components/Avatar.qml
 SettingField     1.0 components/SettingField.qml
+SourcePicker     1.0 components/SourcePicker.qml
 GroupHeading     1.0 components/GroupHeading.qml
 TabStrip         1.0 components/TabStrip.qml
 LidPreview       1.0 components/LidPreview.qml
@@ -154,6 +157,7 @@ InputSection          1.0 settings/InputSection.qml
 MonitorsSection       1.0 settings/MonitorsSection.qml
 KeysSection           1.0 settings/KeysSection.qml
 SystemSection         1.0 settings/SystemSection.qml
+IntegrationsSection   1.0 settings/IntegrationsSection.qml
 ProfilesPart          1.0 settings/ProfilesPart.qml
 ControlsSection       1.0 settings/ControlsSection.qml
 FontPicker            1.0 settings/FontPicker.qml

@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
 // │   C O D I N G   M O D U L E                                              │
-// │   leetcode or codeforces · a year of practice when open                  │
+// │   activity · github, leetcode, codeforces and gitlab, or all at once     │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -14,113 +14,99 @@ import "../../theme"
 import "../../services"
 import "../../components"
 
+// A year of activity in one grid. The bar draws the symbol and the total for
+// whatever the toggle is showing; the island opens it into the grid, with the
+// toggle across the top when more than one platform has a handle.
+//
+// `All` adds the platforms' days together, so a busy day reads at a glance
+// and the wall belongs to no single platform. The same choice is on the
+// desktop widget (`SourcePicker`), and both write the one setting.
 Item {
     id: root
 
-    // Default implicit size for the chip view; will expand when detail is shown.
-    implicitWidth: Theme.capsuleHeight * 2
-    implicitHeight: Theme.capsuleHeight
+    implicitWidth: holder.implicitWidth
+    implicitHeight: holder.implicitHeight
 
-    // The colours a cell takes, by level; the two platforms read at a glance.
-    readonly property var levels: CodingService.platform === "codeforces"
-        ? Theme.codeforcesLevels : Theme.leetcodeLevels
-
-    // Only a choice to make when both handles are set.
-    readonly property bool offersChoice: CodingService.configured.length > 1
-
-    // Show detail when width exceeds threshold (i.e., when opened in the island).
-    property bool showDetail: width > Theme.capsuleHeight * 3
+    // Only a choice to make when more than one platform is set.
+    readonly property bool offersChoice: CodingService.platforms.length > 1
 
     Component.onCompleted: CodingService.subscribe()
     Component.onDestruction: CodingService.release()
 
     Loader {
+        id: holder
         anchors.fill: parent
-        sourceComponent: showDetail ? detail : chip
+        sourceComponent: detail
     }
 
-    // ── CHIP VIEW ───────────────────────────────────────────────────────────
-    // Shows a simple symbol and total active days (or streak) for the bar.
-    Component {
-        id: chip
-        RowLayout {
-            spacing: 4
-            Text {
-                text: "</>"
-                font.family: Theme.fontMono
-                font.pixelSize: 16
-                color: Theme.indicator
-            }
-            Text {
-                text: CodingService.total
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                color: CodingService.available ? Theme.text : Theme.textMuted
-                // If no data yet, show a placeholder.
-                visible: CodingService.available || CodingService.total > 0
-            }
-            // Show a waiting indicator when loading.
-            Text {
-                text: "–"
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.textMuted
-                visible: !CodingService.available && CodingService.total === 0
-            }
-        }
-    }
+    // ── DETAIL ──────────────────────────────────────────────────────────────
 
-    // ── DETAIL VIEW ─────────────────────────────────────────────────────────
-    // The contribution grid shown in the island.
     Component {
         id: detail
+
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 14
             spacing: 6
 
-            // Platform selector (if both configured).
+            // The toggle, and what the reading adds up to.
             RowLayout {
-                visible: root.offersChoice
+                Layout.fillWidth: true
                 spacing: 12
 
-                Text {
-                    text: "Platform"
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    color: Theme.textMuted
-                }
-
-                // Only when there is a choice to make.
                 SegmentedControl {
+                    visible: root.offersChoice
                     options: CodingService.platforms.map(
-                        entry => ({ id: entry.id, label: entry.label }))
+                        entry => ({ id: entry.id, label: Tr.t(entry.label) }))
                     current: CodingService.platform
                     onSelected: id => CodingService.setPlatform(id)
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Text {
+                    visible: CodingService.available
+                    text: `${CodingService.totalLabel}`
+                    font.family: Theme.fontMono
+                    font.pixelSize: Theme.fontSizeMedium
+                    font.weight: Font.DemiBold
+                    color: Theme.text
                 }
             }
 
             ContributionGrid {
-                id: grid
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 weeks: CodingService.weeks
-                levels: root.levels
+                levels: CodingService.levels
                 // As many recent weeks as fit the island; the full year is the
                 // widget's.
                 maxWeeks: 30
                 spacing: 3
             }
 
-            // Shows the reading's age, since it comes from the network.
-            Text {
+            // The platform drawn, and the reading's age, since it comes from
+            // the network.
+            RowLayout {
                 Layout.fillWidth: true
-                horizontalAlignment: Text.AlignRight
-                text: CodingService.age !== "" ? CodingService.age : ""
-                visible: text !== ""
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmaller
-                color: Theme.textMuted
+                spacing: 8
+
+                Text {
+                    Layout.fillWidth: true
+                    text: CodingService.platformName
+                    elide: Text.ElideRight
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.textMuted
+                }
+
+                Text {
+                    visible: CodingService.age !== ""
+                    text: CodingService.age
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.textMuted
+                }
             }
         }
     }

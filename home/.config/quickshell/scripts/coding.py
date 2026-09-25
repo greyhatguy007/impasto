@@ -3,17 +3,20 @@
 # ╭──────────────────────────────────────────────────────────────────────────╮
 # │                                                                          │
 # │   C O D I N G                                                            │
-# │   a year of solved problems · leetcode or codeforces                     │
+# │   a year of solved problems · leetcode, codeforces or gitlab             │
 # │                                                                          │
 # │   github.com/andreumassanet/impasto                                      │
 # │                                                                          │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
-"""A rolling year of practice, from LeetCode or Codeforces.
+"""A rolling year of practice, from LeetCode, Codeforces or GitLab.
 
 LeetCode's public GraphQL answers a username with a submission calendar: a map
 of UTC days to how many submissions landed on each. Codeforces has no calendar,
 only the submission list, so accepted submissions are bucketed by day here.
+GitLab has a calendar too, but it is behind a token; its public events are
+not, so pushes, merge requests, issues and comments are bucketed by day here,
+over as many pages as the year takes, capped to keep the recent end.
 Either way the shape is GitHub's — 53 columns of seven levels — so the same
 contribution grid draws it.
 
@@ -54,6 +57,22 @@ query userProfileCalendar($username: String!, $year: Int) {
 """
 
 CODEFORCES = "https://codeforces.com/api/user.status"
+
+GITLAB = "https://gitlab.com/api/v4"
+# What the profile calendar counts, near enough: pushes, opened and settled
+# merge requests and issues, approvals and comments. `pushed` comes in three
+# spellings (plain, to, new) across GitLab versions.
+GITLAB_COUNTED = (
+    "pushed", "pushed to", "pushed new",
+    "opened", "closed", "reopened",
+    "accepted", "merged", "approved", "commented on",
+)
+GITLAB_PER_PAGE = 100
+# Events arrive newest first, so a cap keeps the recent end of the year. A
+# quiet account (all of them, nearly) fits far inside this; one that makes
+# thousands of events a year would need a hundred pages, and is left partial
+# rather than fetched for minutes on end.
+GITLAB_MAX_PAGES = 20
 
 
 class UserNotFound(Exception):
@@ -201,12 +220,64 @@ def codeforces(user, today):
     return package(user, counts, today, f"codeforces.com/profile/{user}")
 
 
+# ── GITLAB ──────────────────────────────────────────────────────────────────
+
+def gitlab_pages(user, since):
+    """Every event page from the newest back to `since`, oldest last."""
+    pages = []
+    page = 1
+    while page <= GITLAB_MAX_PAGES:
+        body = curl([f"{GITLAB}/users/{user}/events"
+                     f"?after={since.isoformat()}&per_page={GITLAB_PER_PAGE}&page={page}"])
+        try:
+            events = json.loads(body)
+        except json.JSONDecodeError as error:
+            raise RuntimeError(f"gitlab sent no json: {error}") from error
+        # A name with no profile is a 404 carrying a message instead of a list.
+        if isinstance(events, dict):
+            if "404" in str(events.get("message", "")):
+                raise UserNotFound(user)
+            raise RuntimeError(events.get("message") or "gitlab refused the request")
+        if not isinstance(events, list):
+            raise RuntimeError("gitlab sent something other than a list of events")
+        pages.append(events)
+        if len(events) < GITLAB_PER_PAGE:
+            break
+        # Pagination answers in headers; a full page is only walked further
+        # when its oldest event is still inside the window.
+        page += 1
+        if date.fromisoformat(events[-1]["created_at"][:10]) < since:
+            break
+    return pages
+
+
+def gitlab(user, today):
+    since = today - timedelta(days=WEEKS * 7 - 1)
+    counts = {}
+    pages = gitlab_pages(user, since)
+    if len(pages) == GITLAB_MAX_PAGES and pages[-1] and \
+            date.fromisoformat(pages[-1][-1]["created_at"][:10]) >= since:
+        # The cap was reached with events still in the window: the wall keeps
+        # the recent months rather than spending a hundred requests.
+        sys.stderr.write("coding: gitlab ran out of pages; the year is partial\n")
+    for events in pages:
+        for event in events:
+            # An unknown name is a 404, reported before anything is counted.
+            if event.get("action_name") not in GITLAB_COUNTED:
+                continue
+            day = event["created_at"][:10]
+            counts[day] = counts.get(day, 0) + 1
+    return package(user, counts, today, f"gitlab.com/{user}")
+
+
 # ── ENTRY ───────────────────────────────────────────────────────────────────
 
 def report(platform, user):
     today = date.today()
     if platform == "codeforces":
         return codeforces(user, today)
+    if platform == "gitlab":
+        return gitlab(user, today)
     return leetcode(user, today)
 
 

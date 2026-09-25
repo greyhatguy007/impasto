@@ -40,7 +40,6 @@ Item {
         bluetooth: bluetoothWide,
         updates: updatesWide,
         weather: weatherWide,
-        github: githubWide,
         coding: codingWide,
         stats: statsWide,
         claude: claudeWide,
@@ -991,14 +990,7 @@ Item {
         PhotoFace { ink: root.ink; row: root.row; family: "4x2" }
     }
 
-    // Half a year of the contribution wall; see `GithubFace`.
-    Component {
-        id: githubWide
-
-        GithubFace { ink: root.ink; family: "4x2" }
-    }
-
-    // Half a year of the practice wall; see `CodingFace`.
+    // Half a year of the activity wall; see `CodingFace`.
     Component {
         id: codingWide
 

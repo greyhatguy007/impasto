@@ -39,7 +39,6 @@ Item {
         bluetooth: bluetoothSquare,
         updates: updatesSquare,
         weather: weatherSquare,
-        github: githubSquare,
         coding: codingSquare,
         stats: statsSquare,
         claude: claudeSquare,
@@ -549,14 +548,7 @@ Item {
         PhotoFace { ink: root.ink; row: root.row; family: "2x2" }
     }
 
-    // The contribution wall, one face for all four families.
-    Component {
-        id: githubSquare
-
-        GithubFace { ink: root.ink; family: "2x2" }
-    }
-
-    // The practice wall, the same drawing in the platform's ramp.
+    // The activity wall, one face for all four families.
     Component {
         id: codingSquare
 

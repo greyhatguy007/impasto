@@ -59,8 +59,17 @@ Singleton {
     readonly property alias dockLauncher: config.dockLauncher
     readonly property alias weatherPlace: config.weatherPlace
     readonly property alias githubUser: config.githubUser
+    readonly property alias vikunjaUrl: config.vikunjaUrl
+    readonly property alias vikunjaToken: config.vikunjaToken
+    readonly property alias vikunjaProject: config.vikunjaProject
+    readonly property alias vikunjaSync: config.vikunjaSync
+    readonly property alias gcalClientId: config.gcalClientId
+    readonly property alias gcalClientSecret: config.gcalClientSecret
+    readonly property alias gcalCalendar: config.gcalCalendar
+    readonly property alias gcalSync: config.gcalSync
     readonly property alias leetcodeUser: config.leetcodeUser
     readonly property alias codeforcesUser: config.codeforcesUser
+    readonly property alias gitlabUser: config.gitlabUser
     readonly property alias codingPlatform: config.codingPlatform
     readonly property alias petStyle: config.petStyle
     readonly property alias launcherResults: config.launcherResults
@@ -281,7 +290,9 @@ Singleton {
     readonly property var machineKeys: [
         "displays", "lidPolicy",
         "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
-        "leetcodeUser", "codeforcesUser",
+        "leetcodeUser", "codeforcesUser", "gitlabUser",
+        "vikunjaUrl", "vikunjaToken", "vikunjaProject",
+        "gcalClientId", "gcalClientSecret", "gcalCalendar",
         "doNotDisturb", "nightLight", "nightTemperature",
         "recorderAudio", "captureShape", "captureKind"
     ]
@@ -697,15 +708,50 @@ Singleton {
         // lets wttr.in geolocate by IP, which can be tens of kilometres off.
         property string weatherPlace: ""
 
-        // GitHub user for the contributions widget; empty draws nothing.
+        // GitHub user for the activity wall; empty draws nothing.
         property string githubUser: ""
 
-        // LeetCode and Codeforces handles for the practice widget. Empty
-        // draws nothing for that platform; with both set, `codingPlatform`
-        // picks which one the widget shows.
+        // ── VIKUNJA ────────────────────────────────────────────────────
+        //
+        // A self-hosted Vikunja server and an API token (Settings →
+        // Integrations). Kept with the machine rather than the profile, so
+        // switching profile never repaints the credentials. Empty means the
+        // integration is off and the board stays local.
+        property string vikunjaUrl: ""
+        property string vikunjaToken: ""
+
+        // Which project new tasks land in; 0 creates them in the first
+        // project the token owns.
+        property int vikunjaProject: 0
+
+        // Two-way sync: pull the server's tasks and push local changes. Off
+        // leaves the credentials in place but reads and writes nothing.
+        property bool vikunjaSync: true
+
+        // ── GOOGLE CALENDAR ────────────────────────────────────────────
+        //
+        // An OAuth client of the "desktop app" kind (Settings →
+        // Integrations). The refresh token never comes here: the connect
+        // script keeps it in its own state file on this machine, so a
+        // profile switch never carries the key. Empty means the integration
+        // is off and the calendar stays local.
+        property string gcalClientId: ""
+        property string gcalClientSecret: ""
+
+        // Which calendar to read; `primary` is the person's own.
+        property string gcalCalendar: "primary"
+
+        // Off leaves the credentials in place but reads nothing.
+        property bool gcalSync: true
+
+        // LeetCode, Codeforces and GitLab handles for the activity wall (the
+        // GitHub one is above). Empty draws nothing for that platform; with
+        // more than one set, `codingPlatform` picks which one the widget
+        // shows, or `all`, which adds them together.
         property string leetcodeUser: ""
         property string codeforcesUser: ""
-        property string codingPlatform: "auto"
+        property string gitlabUser: ""
+        property string codingPlatform: "all"
 
         // One of `PetService.styles`: how the pet is drawn, everywhere it is
         // drawn.

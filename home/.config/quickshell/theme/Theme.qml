@@ -88,6 +88,20 @@ QtObject {
         "#26292e", "#123a52", "#17567a", "#1f7bab", "#45b1e8"
     ]
 
+    // GitLab's orange, same shape and same lifted empty step as the others;
+    // the platform's own dark UI draws the empty step near-black, so the
+    // lifted tone is shared rather than copied.
+    readonly property var gitlabLevels: [
+        "#26292e", "#4d2c00", "#825e00", "#c78a00", "#fc6d26"
+    ]
+
+    // The combined graph, where every platform with a handle is added up and
+    // capped: no single platform's colour claims the wall, so it has a violet
+    // of its own, fixed across palettes like the other two.
+    readonly property var combinedLevels: [
+        "#26292e", "#432a63", "#6d3fa6", "#9a5fe0", "#c79cff"
+    ]
+
     readonly property int paletteTransition: 260
 
     Behavior on background   { ColorAnimation { duration: root.paletteTransition } }

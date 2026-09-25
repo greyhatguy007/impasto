@@ -17,6 +17,9 @@ import "../../components"
 // The date and its month. Days with tasks due get a dot, and the detail lists
 // the tasks for the selected day. Finished tasks stay on their day, struck
 // through.
+//
+// With Google Calendar connected, the day's events are read in beside the
+// tasks, and a day with only events on it gets a blue dot.
 Item {
     id: root
 
@@ -74,6 +77,7 @@ Item {
             }
 
             readonly property var due: TasksService.on(page.keyOf(page.day))
+            readonly property var events: GCalendarService.on(page.keyOf(page.day))
 
             Column {
                 anchors.fill: parent
@@ -150,6 +154,7 @@ Item {
                                 cell.modelData > 0 ? page.keyOf(cell.modelData) : ""
                             readonly property int tasks: cell.key !== "" ? TasksService.countOn(cell.key) : 0
                             readonly property int pending: cell.key !== "" ? TasksService.pendingOn(cell.key) : 0
+                            readonly property int events: cell.key !== "" ? GCalendarService.on(cell.key).length : 0
 
                             width: month.cellWidth
                             height: month.cellHeight
@@ -179,17 +184,19 @@ Item {
                             }
 
                             // Tasks due: accent while any is open, muted once
-                            // all are done.
+                            // all are done. A day with only events takes blue.
                             Rectangle {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 anchors.bottom: parent.bottom
                                 anchors.bottomMargin: 2
-                                visible: cell.tasks > 0
+                                visible: cell.tasks > 0 || cell.events > 0
                                 width: 3
                                 height: 3
                                 radius: 1.5
                                 color: cell.today ? Theme.accentText
-                                    : (cell.pending > 0 ? Theme.accent : Theme.textMuted)
+                                    : (cell.tasks > 0
+                                        ? (cell.pending > 0 ? Theme.accent : Theme.textMuted)
+                                        : Theme.blue)
                             }
 
                             MouseArea {
@@ -222,9 +229,15 @@ Item {
                                     root.today.getMonth(), page.day), "dddd d")
                             const n = page.due.length
                             const left = page.due.filter(task => task.state !== "done").length
-                            if (n === 0)
-                                return `${name} · nothing due`
-                            return `${name} · ${left} of ${n} to do`
+                            const m = page.events.length
+                            const parts = []
+                            if (n === 0 && m === 0)
+                                return `${name} · nothing on`
+                            if (n > 0)
+                                parts.push(`${left} of ${n} to do`)
+                            if (m > 0)
+                                parts.push(`${m} ${m === 1 ? Tr.t("event") : Tr.t("events")}`)
+                            return `${name} · ${parts.join(" · ")}`
                         }
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
@@ -287,6 +300,60 @@ Item {
                                 onClicked: {
                                     TasksService.open(row.modelData.key)
                                     ModuleService.requestPanel("board")
+                                }
+                            }
+                        }
+                    }
+
+                    // The day's events, from Google Calendar when connected.
+                    // A running event takes the accent; the rest stay plain.
+                    Repeater {
+                        model: ScriptModel {
+                            values: page.events.slice(0, 2)
+                            objectProp: "id"
+                        }
+
+                        Item {
+                            id: eventRow
+
+                            required property var modelData
+
+                            readonly property bool now: eventRow.modelData.startTime !== ""
+                                && eventRow.modelData.day === TasksService.todayKey
+                                && eventRow.modelData.startTime <= Qt.formatDateTime(root.clock.date, "HH:mm")
+                                && (eventRow.modelData.endTime === ""
+                                    || eventRow.modelData.endTime > Qt.formatDateTime(root.clock.date, "HH:mm"))
+
+                            width: parent.width
+                            height: 18
+
+                            Row {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.leftMargin: 4
+                                anchors.rightMargin: 4
+                                spacing: 6
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: eventRow.modelData.startTime !== ""
+                                    text: eventRow.modelData.startTime
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    color: eventRow.now ? Theme.accent : Theme.textMuted
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - (eventRow.modelData.startTime !== "" ? 46 : 17)
+                                    text: eventRow.modelData.title !== ""
+                                        ? eventRow.modelData.title : Tr.t("(untitled event)")
+                                    elide: Text.ElideRight
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.italic: eventRow.modelData.allDay
+                                    color: eventRow.now ? Theme.text : Theme.textMuted
                                 }
                             }
                         }

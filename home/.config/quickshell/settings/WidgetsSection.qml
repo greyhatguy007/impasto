@@ -55,14 +55,14 @@ SettingsSection {
         }
 
         SettingGroup {
-            title: "GitHub"
-            note: Tr.t("Whose public contribution graph to draw.")
-            hint: Tr.t("The graph is read from the public profile page, so no token or account is needed. It stays empty until you enter a username.")
+            title: Tr.t("Activity")
+            note: Tr.t("Whose year of work to draw: GitHub, LeetCode, Codeforces or GitLab.")
+            hint: Tr.t("Each is read from its public profile, so no token or account is needed. With more than one handle set, the widget's toggle picks which wall is drawn — or All, which adds them together and caps the sum. With one set, that one is drawn.")
 
-            // An unknown user returns a page with no calendar and the widget
-            // keeps its last grid, so the error is shown here.
+            // An unknown user keeps its last grid, so the error is shown
+            // here, on the handle that is wrong.
             SettingField {
-                label: Tr.t("Username")
+                label: Tr.t("GitHub")
                 reading: GithubService.userUnknown
                     ? Tr.t("No such profile — the last grid is still showing") : ""
                 alarm: GithubService.userUnknown
@@ -71,20 +71,12 @@ SettingsSection {
                 onEdited: value => SettingsService.set(
                     "githubUser", value.trim().replace(/^@/, ""))
             }
-        }
 
-        SettingGroup {
-            title: Tr.t("Practice")
-            note: Tr.t("Whose LeetCode or Codeforces year to draw.")
-            hint: Tr.t("Both are read from their public profiles, so no token or account is needed. With both handles set, the widget's switch picks which one is drawn; otherwise the one set is drawn.")
-
-            // An unknown handle keeps its last grid, so the error is shown
-            // here, on the platform being drawn.
             SettingField {
                 label: Tr.t("LeetCode")
-                reading: CodingService.platform === "leetcode" && CodingService.userUnknown
+                reading: CodingService.handleUnknown("leetcode")
                     ? Tr.t("No such profile — the last grid is still showing") : ""
-                alarm: CodingService.platform === "leetcode" && CodingService.userUnknown
+                alarm: CodingService.handleUnknown("leetcode")
                 placeholder: Tr.t("Nobody yet")
                 value: SettingsService.leetcodeUser
                 onEdited: value => SettingsService.set(
@@ -93,13 +85,24 @@ SettingsSection {
 
             SettingField {
                 label: Tr.t("Codeforces")
-                reading: CodingService.platform === "codeforces" && CodingService.userUnknown
+                reading: CodingService.handleUnknown("codeforces")
                     ? Tr.t("No such profile — the last grid is still showing") : ""
-                alarm: CodingService.platform === "codeforces" && CodingService.userUnknown
+                alarm: CodingService.handleUnknown("codeforces")
                 placeholder: Tr.t("Nobody yet")
                 value: SettingsService.codeforcesUser
                 onEdited: value => SettingsService.set(
                     "codeforcesUser", value.trim().replace(/^@/, ""))
+            }
+
+            SettingField {
+                label: Tr.t("GitLab")
+                reading: CodingService.handleUnknown("gitlab")
+                    ? Tr.t("No such profile — the last grid is still showing") : ""
+                alarm: CodingService.handleUnknown("gitlab")
+                placeholder: Tr.t("Nobody yet")
+                value: SettingsService.gitlabUser
+                onEdited: value => SettingsService.set(
+                    "gitlabUser", value.trim().replace(/^@/, ""))
             }
         }
 

@@ -471,6 +471,18 @@ FocusScope {
                                                 color: card.overdue ? Theme.red : Theme.textMuted
                                             }
                                         }
+
+                                        // A task on a server, and one whose
+                                        // change has not gone yet.
+                                        Text {
+                                            Layout.alignment: Qt.AlignTop
+                                            Layout.topMargin: 1
+                                            visible: card.task.remote === "vikunja"
+                                            text: card.task.dirty ? "󰑐" : "󰖟"
+                                            font.family: Theme.fontMono
+                                            font.pixelSize: 11
+                                            color: card.task.dirty ? Theme.accent : Theme.textMuted
+                                        }
                                     }
 
                                     HoverHandler {
@@ -545,25 +557,43 @@ FocusScope {
 
             // ── FOOTER ──────────────────────────────────────────────────
 
-            Text {
+            RowLayout {
                 Layout.fillWidth: true
-                text: {
-                    const pending = TasksService.pending
-                    const over = TasksService.overdue.length
-                    const today = TasksService.pendingOn(TasksService.todayKey)
-                    if (TasksService.count === 0)
-                        return "Nothing on the board yet"
-                    const parts = [`${pending} ${pending === 1 ? "task" : "tasks"} open`]
-                    if (today > 0)
-                        parts.push(`${today} due today`)
-                    if (over > 0)
-                        parts.push(`${over} overdue`)
-                    return parts.join(" · ")
+                spacing: 10
+
+                Text {
+                    Layout.fillWidth: true
+                    text: {
+                        const pending = TasksService.pending
+                        const over = TasksService.overdue.length
+                        const today = TasksService.pendingOn(TasksService.todayKey)
+                        if (TasksService.count === 0)
+                            return Tr.t("Nothing on the board yet")
+                        const parts = [`${pending} ${pending === 1
+                            ? Tr.t("task") : Tr.t("tasks")} ${Tr.t("open")}`]
+                        if (today > 0)
+                            parts.push(`${today} ${Tr.t("due today")}`)
+                        if (over > 0)
+                            parts.push(`${over} ${Tr.t("overdue")}`)
+                        return parts.join(" · ")
+                    }
+                    elide: Text.ElideRight
+                    font.family: Theme.fontMono
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: TasksService.overdue.length > 0 ? Theme.red : Theme.textMuted
                 }
-                elide: Text.ElideRight
-                font.family: Theme.fontMono
-                font.pixelSize: Theme.fontSizeSmall
-                color: TasksService.overdue.length > 0 ? Theme.red : Theme.textMuted
+
+                // Where the board stands with its server, if it has one.
+                Text {
+                    visible: VikunjaService.configured
+                    text: VikunjaService.reason !== "" ? VikunjaService.reasonLabel
+                        : (VikunjaService.available
+                            ? `${Tr.t("synced")} ${VikunjaService.age}`
+                            : Tr.t("reaching the server…"))
+                    font.family: Theme.fontMono
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: VikunjaService.reason !== "" ? Theme.red : Theme.textMuted
+                }
             }
         }
     }

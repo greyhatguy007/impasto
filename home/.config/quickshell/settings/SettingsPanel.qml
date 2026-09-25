@@ -57,7 +57,7 @@ Item {
           blurb: Tr.t("What sits on the wallpaper, under the windows."),
           tabs: [{ id: "modules", label: Tr.t("Module settings") },
                  { id: "widgets", label: Tr.t("The widgets") }],
-          keywords: "widgets desktop wallpaper widget place drag size shape capsule bare outline accent style palette ink tray edit arrange clock calendar notes note sticky theme analogue modern opacity weather location place city github contributions username handwriting edges deck pet creature plush paper pixel egg species style spectrum cava visualiser visualizer bars audio music leetcode codeforces practice coding solved submissions streak",
+          keywords: "widgets desktop wallpaper widget place drag size shape capsule bare outline accent style palette ink tray edit arrange clock calendar notes note sticky theme analogue modern opacity weather location place city github gitlab contributions username handwriting edges deck pet creature plush paper pixel egg species style spectrum cava visualiser visualizer bars audio music leetcode codeforces practice activity coding solved submissions streak source all toggle",
           page: widgetsPage },
 
         { id: "controls", category: "shell", icon: "󰕰", label: Tr.t("Control Centre"),
@@ -118,6 +118,13 @@ Item {
                  { id: "idle", label: Tr.t("When you leave") }],
           keywords: "session lock blur password suspend security idle timeout sleep screen off dpms away never lock after avatar picture name account clock stacked inline face unlock howdy camera infrared enrol enroll scan faces recognise",
           page: sessionPage },
+
+        { id: "integrations", category: "session", icon: "󰒍", label: Tr.t("Integrations"),
+          blurb: Tr.t("The services the shell speaks to, and their keys."),
+          tabs: [{ id: "tasks", label: Tr.t("Tasks") },
+                 { id: "calendar", label: Tr.t("Calendar") }],
+          keywords: "integrations vikunja server api token key credential credentials sync tasks board self hosted remote account url google calendar gcal oauth client secret events agenda",
+          page: integrationsPage },
 
         { id: "system", category: "session", icon: "󰍛", label: Tr.t("System"),
           blurb: Tr.t("Profiles, language, this machine and reset."),
@@ -573,5 +580,6 @@ Item {
     Component { id: monitorsPage;   MonitorsSection {} }
     Component { id: keysPage;       KeysSection {} }
     Component { id: sessionPage;    SessionSection {} }
+    Component { id: integrationsPage; IntegrationsSection {} }
     Component { id: systemPage;     SystemSection {} }
 }

@@ -28,7 +28,6 @@ Item {
     readonly property var components: ({
         clock: clockFace,
         weather: weatherFace,
-        github: githubFace,
         coding: codingFace,
         battery: batteryFace,
         stats: statsFace,
@@ -54,7 +53,6 @@ Item {
 
     Component { id: clockFace;      ClockFace      { family: root.family; ink: root.ink } }
     Component { id: weatherFace;    WeatherFace    { family: root.family; ink: root.ink } }
-    Component { id: githubFace;     GithubFace     { family: root.family; ink: root.ink } }
     Component { id: codingFace;     CodingFace     { family: root.family; ink: root.ink } }
     Component { id: batteryFace;    BatteryFace    { family: root.family; ink: root.ink } }
     Component { id: statsFace;      StatsFace      { family: root.family; ink: root.ink } }

@@ -925,7 +925,98 @@ QtObject {
             "Reset this profile": "Restablecer este perfil",
             "Back to the defaults": "Volver a los valores por defecto",
             "A Hyprland shell, and the desk around it":
-                "Un shell para Hyprland, y el escritorio alrededor"
+                "Un shell para Hyprland, y el escritorio alrededor",
+
+            // ── INTEGRATIONS ────────────────────────────────────────────────
+            "Integrations": "Integraciones",
+            "The services the shell speaks to, and their keys.":
+                "Los servicios con los que habla el shell, y sus claves.",
+            "A self-hosted task board, folded into the board here.":
+                "Un tablero de tareas autoalojado, integrado en el tablero de aquí.",
+            "Enter the address of your Vikunja server and an API token from Vikunja's Settings → API tokens. Tasks are read from the server and your own changes are sent back; with no server set, the board stays local. The token is kept in the shell's settings file on this machine.":
+                "Escribe la dirección de tu servidor Vikunja y un token de la API de Ajustes → Tokens de la API de Vikunja. Las tareas se leen del servidor y tus propios cambios se envían de vuelta; sin servidor, el tablero se queda local. El token se guarda en el archivo de ajustes del shell, en esta máquina.",
+            "Server": "Servidor",
+            "API token": "Token de la API",
+            "Paste the token from Vikunja": "Pega el token de Vikunja",
+            "Project": "Proyecto",
+            "The first project": "El primer proyecto",
+            "the first project": "el primer proyecto",
+            "The first project the token owns": "El primer proyecto que tiene el token",
+            "Sync": "Sincronización",
+            "Set a server and a token first": "Configura antes un servidor y un token",
+            "On — the board follows the server": "Activada: el tablero sigue al servidor",
+            "Off — the board stays local": "Desactivada: el tablero se queda local",
+            "Sync now": "Sincronizar ahora",
+            "Refresh": "Actualizar",
+            "Synced": "Sincronizado",
+            "synced": "sincronizado",
+            "Not syncing": "Sin sincronizar",
+            "Reaching the server…": "Contactando con el servidor…",
+            "reaching the server…": "contactando con el servidor…",
+            "Local only — no server yet": "Solo local: aún no hay servidor",
+            "task on the server": "tarea en el servidor",
+            "tasks on the server": "tareas en el servidor",
+            "just now": "ahora mismo",
+            "min ago": "min",
+            "h ago": "h",
+            "Add a server and an API token": "Añade un servidor y un token de la API",
+            "The token was refused": "El token fue rechazado",
+            "The server did not answer": "El servidor no respondió",
+            "No connection to the server": "Sin conexión con el servidor",
+            "No project to put a task in": "No hay proyecto donde poner la tarea",
+            "The change could not be sent": "No se pudo enviar el cambio",
+            "Nothing on the board yet": "Nada en el tablero todavía",
+            "task": "tarea",
+            "tasks": "tareas",
+            "open": "abiertas",
+            "due today": "para hoy",
+            "overdue": "atrasadas",
+
+            // ── GOOGLE CALENDAR ───────────────────────────────────────────
+            "The script could not be run": "No se pudo ejecutar el script",
+            "Add the client id and secret": "Añade el id y el secreto del cliente",
+            "Connect once in the browser": "Conecta una vez en el navegador",
+            "Google refused the key": "Google rechazó la clave",
+            "Google did not answer": "Google no respondió",
+            "No connection to Google": "Sin conexión con Google",
+            "Set a client id and secret first": "Pon primero el id y el secreto del cliente",
+            "Connected": "Conectado",
+            "the token is on this machine": "el token está en esta máquina",
+            "Not connected yet": "Aún sin conectar",
+            "Local only — no client yet": "Solo local: aún no hay cliente",
+            "Off — the calendar stays local": "No: el calendario se queda local",
+            "Not reading": "Sin leer",
+            "Reaching Google…": "Contactando con Google…",
+            "event in view": "evento a la vista",
+            "events in view": "eventos a la vista",
+            "Your days, folded in beside the tasks.": "Tus días, junto a las tareas.",
+            "Make an OAuth client of the desktop kind in Google Cloud Console (APIs & Services → Credentials), with the Calendar API enabled, and paste its id and secret here. Connecting opens the browser once to agree; the refresh token is kept in the shell's state on this machine and never in the settings file. Read-only: the shell writes nothing to your calendar.":
+                "Crea un cliente OAuth de tipo escritorio en Google Cloud Console (APIs y servicios → Credenciales), con la API de Calendar activada, y pega aquí su id y su secreto. Conectar abre el navegador una vez para dar el permiso; el token de renovación se guarda en el estado del shell, en esta máquina, y nunca en el archivo de ajustes. Solo lectura: el shell no escribe nada en tu calendario.",
+            "Client id": "Id del cliente",
+            "Client secret": "Secreto del cliente",
+            "Paste the client secret": "Pega el secreto del cliente",
+            "Calendar": "Calendario",
+            "Connection": "Conexión",
+            "Connect": "Conectar",
+            "Disconnect": "Desconectar",
+            "On — events come down and are read": "Sí: los eventos bajan y se leen",
+            "event": "evento",
+            "events": "eventos",
+            "(untitled event)": "(evento sin título)",
+
+            // ── ACTIVITY ────────────────────────────────────────────────────
+            "Activity": "Actividad",
+            "Whose year of work to draw: GitHub, LeetCode, Codeforces or GitLab.":
+                "De quién dibujar el año de trabajo: GitHub, LeetCode, Codeforces o GitLab.",
+            "Each is read from its public profile, so no token or account is needed. With more than one handle set, the widget's toggle picks which wall is drawn — or All, which adds them together and caps the sum. With one set, that one is drawn.":
+                "Cada uno se lee de su perfil público, así que no hace falta token ni cuenta. Con más de un usuario configurado, el interruptor del widget elige qué muro se dibuja —o All, que los suma y limita el total. Con uno solo, se dibuja ese.",
+            "No GitHub, LeetCode, Codeforces or GitLab user set":
+                "Sin usuario de GitHub, LeetCode, Codeforces o GitLab",
+            "All": "Todo",
+            "GitHub": "GitHub",
+            "LeetCode": "LeetCode",
+            "Codeforces": "Codeforces",
+            "GitLab": "GitLab"
         }
     })
 }

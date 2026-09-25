@@ -91,10 +91,14 @@ Singleton {
             if (!kept || !kept.key)
                 continue
             const row = Object.assign({
-                text: "", body: "", state: "todo", due: "", rank: index, created: 0, finished: 0
+                text: "", body: "", state: "todo", due: "", rank: index, created: 0, finished: 0,
+                // Set on the rows that came from a server (see “VIKUNJA” below).
+                remote: "", remoteId: 0, project: 0, dirty: false, tries: 0
             }, kept)
             if (!root.states.some(item => item.id === row.state))
                 row.state = "todo"
+            row.remoteId = Number(row.remoteId) || 0
+            row.tries = Number(row.tries) || 0
             rows.push(row)
         }
         return rows
@@ -183,6 +187,208 @@ Singleton {
         if (root.next)
             return `${root.next.text} · ${root.dueLabel(root.next.due)}`
         return root.pending > 0 ? "nothing dated" : "nothing to do"
+    }
+
+    // ── VIKUNJA ─────────────────────────────────────────────────────────────
+    //
+    // With a server configured the board is the meeting of two lists: the
+    // tasks written here and the ones read from Vikunja, folded into this one
+    // array so the calendar, the widgets and every face need to know nothing
+    // about either. A row that came from the server carries `remoteId`; a row
+    // with a change not yet sent carries `dirty` and is left alone by the next
+    // read until it has gone.
+    //
+    // `VikunjaService` does the talking; this is only where the two meet.
+
+    readonly property bool syncing: VikunjaService.syncing
+
+    readonly property int remoteCount:
+        root.tasks.filter(task => task.remote === "vikunja").length
+
+    // A server task as a board row. Its rank sits past the local ones so a
+    // freshly read task does not jump above what was arranged here.
+    function rowFromRemote(task: var, rank: int): var {
+        return {
+            key: `vik-${task.id}`,
+            text: task.title ?? "",
+            body: task.description ?? "",
+            state: task.done ? "done" : "todo",
+            due: task.due ?? "",
+            rank: rank,
+            created: task.created ? Date.parse(task.created) : 0,
+            finished: task.done
+                ? (task.doneAt ? Date.parse(task.doneAt) : Date.now()) : 0,
+            remote: "vikunja",
+            remoteId: task.id,
+            project: task.project ?? 0,
+            dirty: false,
+            tries: 0
+        }
+    }
+
+    // The server's fields onto the row that carries them. The board's own
+    // order is kept, and a task completed here and completed there agree; a
+    // task only *this* side calls done is reopened when the server disagrees,
+    // since the server is the one the other devices see.
+    function mergeRemote(row: var, task: var): var {
+        const done = task.done === true
+        return Object.assign({}, row, {
+            text: task.title ?? row.text,
+            body: task.description ?? row.body,
+            due: task.due ?? "",
+            state: done ? "done" : (row.state === "done" ? "todo" : row.state),
+            finished: done
+                ? (row.finished || (task.doneAt ? Date.parse(task.doneAt) : Date.now())) : 0,
+            project: task.project ?? row.project,
+            dirty: false,
+            tries: 0
+        })
+    }
+
+    function same(list: var): bool {
+        return JSON.stringify(list) === JSON.stringify(root.tasks)
+    }
+
+    // Folds one read of the server into the one list: tasks it still has are
+    // updated in place, tasks it has gained are added, and — only on a read
+    // that came back whole — tasks it has lost are dropped. A row with an
+    // unsent change is left as it is, so a poll never clobbers what was typed
+    // a moment ago.
+    function reconcile(server: var): void {
+        if (!root.syncing)
+            return
+        const list = server ?? []
+        const complete = VikunjaService.complete
+        const known = ({})
+        for (const task of list)
+            known[task.id] = true
+
+        const next = []
+        let retry = false
+        for (const row of root.tasks) {
+            if (row.remote !== "vikunja") {
+                next.push(row)
+                continue
+            }
+            // An unsent change outranks what the server says, whether it is
+            // the same task underneath or one the read did not reach.
+            if (row.dirty) {
+                // The server is reachable again; give a failed send another
+                // try rather than leaving the change stranded.
+                if (row.tries > 0)
+                    retry = true
+                next.push(Object.assign({}, row, { tries: 0 }))
+                continue
+            }
+            if (!known[row.remoteId]) {
+                // Gone from the server — unless it was only just made here and
+                // never sent, which the server has no reason to know, or the
+                // read was partial and might simply not have reached it.
+                if (complete && row.remoteId > 0)
+                    continue
+                next.push(row)
+                continue
+            }
+            next.push(root.mergeRemote(row, list.find(item => item.id === row.remoteId)))
+        }
+
+        let index = 0
+        for (const task of list) {
+            index += 1
+            if (root.tasks.some(row => row.remoteId === task.id))
+                continue
+            next.push(root.rowFromRemote(task, 1000 + index))
+        }
+
+        if (!root.same(next))
+            root.write(next)
+        if (retry)
+            root.sender.restart()
+    }
+
+    // Sends a task the server accepted: a new one is linked to it, an edited
+    // one is simply no longer dirty.
+    function absorb(key: string, task: var): void {
+        const row = root.entry(key)
+        if (!row) {
+            // Removed here while the create was in flight; do not leave it
+            // behind on the server.
+            if (task && task.id)
+                VikunjaService.discard(task.id)
+            return
+        }
+        if (task && task.id && !row.remoteId)
+            root.update(key, { remote: "vikunja", remoteId: task.id,
+                               project: task.project ?? 0 }, false)
+        root.update(key, { dirty: false, tries: 0 }, false)
+    }
+
+    // Sync switched off, or the credentials removed: the rows that came from
+    // the server go, since the server still has them. A task made here and not
+    // yet sent stays, as an ordinary local one, rather than being lost.
+    function orphan(): void {
+        const next = []
+        for (const row of root.tasks) {
+            if (row.remote !== "vikunja") {
+                next.push(row)
+                continue
+            }
+            if (!row.remoteId)
+                next.push(Object.assign({}, row,
+                    { remote: "", dirty: false, tries: 0 }))
+        }
+        if (!root.same(next))
+            root.write(next)
+    }
+
+    readonly property Connections server: Connections {
+        target: VikunjaService
+
+        function onTasksChanged(): void {
+            root.reconcile(VikunjaService.tasks)
+        }
+        function onSyncingChanged(): void {
+            if (!VikunjaService.syncing)
+                root.orphan()
+        }
+        function onSaved(key, task): void { root.absorb(key, task) }
+        function onDeleted(key): void { /* already gone here */ }
+        function onRejected(key): void {
+            // The row keeps `dirty`, so nothing typed is lost. `tries` counts
+            // the refusals, so a task the server will not take is not sent
+            // again and again; a later read or edit starts it over.
+            if (!root.entry(key))
+                return
+            root.write(root.tasks.map(task => task.key === key
+                ? Object.assign({}, task, { tries: (task.tries ?? 0) + 1 })
+                : task))
+        }
+    }
+
+    // Only what the settings describe as a self-hosted server reaches here.
+    readonly property bool readyToSend: root.syncing && VikunjaService.configured
+
+    readonly property Timer sender: Timer {
+        interval: 1200
+        onTriggered: root.push()
+    }
+
+    // Everything with an unsent change goes at once, a moment after the last
+    // keystroke. A blank task is skipped: it is a card being written, and the
+    // server would only refuse it.
+    function push(): void {
+        if (!root.readyToSend)
+            return
+        for (const row of root.tasks) {
+            if (row.remote !== "vikunja" || !row.dirty || row.tries >= 3)
+                continue
+            if ((row.text ?? "").trim() === "")
+                continue
+            if (row.remoteId)
+                VikunjaService.update(row)
+            else
+                VikunjaService.create(row)
+        }
     }
 
     // today, tomorrow, yesterday, a weekday within a week, else the date.
@@ -335,6 +541,9 @@ Singleton {
     function add(text: string, due = "", state = "todo", body = ""): string {
         const line = (text ?? "").trim()
         const key = root.newKey()
+        // A task written while a server is configured belongs to it and goes
+        // out as soon as it has a line; one written before that stays here.
+        const linked = root.readyToSend
         root.write(root.tasks.concat([{
             key: key,
             text: line,
@@ -343,8 +552,15 @@ Singleton {
             due: due ?? "",
             rank: root.lastRank(state),
             created: Date.now(),
-            finished: 0
+            finished: 0,
+            remote: linked ? "vikunja" : "",
+            remoteId: 0,
+            project: 0,
+            dirty: linked,
+            tries: 0
         }]))
+        if (linked)
+            root.sender.restart()
         root.added(key)
         return key
     }
@@ -361,9 +577,17 @@ Singleton {
         return !task || (task.text ?? "").trim() === ""
     }
 
-    function update(key: string, changes: var): void {
-        root.write(root.tasks.map(task =>
-            task.key === key ? Object.assign({}, task, changes) : task))
+    // `send` is false for a change that came *from* the server (`absorb`,
+    // `reconcile`), which must not be marked to go straight back.
+    function update(key: string, changes: var, send = true): void {
+        const row = root.entry(key)
+        const outward = send && row !== null && row.remote === "vikunja"
+        root.write(root.tasks.map(task => task.key === key
+            ? Object.assign({}, task, changes,
+                outward ? { dirty: true, tries: 0 } : {})
+            : task))
+        if (outward)
+            root.sender.restart()
     }
 
     // To the bottom of the column; `finished` is set only for done.
@@ -388,16 +612,23 @@ Singleton {
         column.splice(at, 0, task)
         const ranks = {}
         column.forEach((other, position) => { ranks[other.key] = position })
+        const moved = task.state !== state
         root.write(root.tasks.map(other => {
             if (ranks[other.key] === undefined)
                 return other
             const next = Object.assign({}, other, { rank: ranks[other.key] })
-            if (other.key === key && other.state !== state) {
+            if (other.key === key && moved) {
                 next.state = state
                 next.finished = state === "done" ? Date.now() : 0
             }
+            // Only a change of lane is worth sending; the order within one is
+            // the board's own and the server has nothing to store it in.
+            if (other.key === key && moved && other.remote === "vikunja")
+                Object.assign(next, { dirty: true, tries: 0 })
             return next
         }))
+        if (moved && task.remote === "vikunja")
+            root.sender.restart()
     }
 
     function setDue(key: string, due: string): void {
@@ -413,8 +644,13 @@ Singleton {
     }
 
     function remove(key: string): void {
-        if (!root.entry(key))
+        const row = root.entry(key)
+        if (!row)
             return
+        // A task the server knows about is removed there too; one that was
+        // never sent simply goes.
+        if (row.remote === "vikunja" && row.remoteId)
+            VikunjaService.remove(row)
         root.write(root.tasks.filter(task => task.key !== key))
         if (root.opened === key)
             root.opened = ""

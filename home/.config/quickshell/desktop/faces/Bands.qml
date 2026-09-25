@@ -30,7 +30,6 @@ Item {
     readonly property var components: ({
         clock: clockBand,
         weather: weatherBand,
-        github: githubBand,
         coding: codingBand,
         notes: notesBand,
         photo: photoBand,
@@ -177,14 +176,7 @@ Item {
         PhotoFace { ink: root.ink; row: root.row; family: "8x2" }
     }
 
-    // The whole contribution year; see `GithubFace`.
-    Component {
-        id: githubBand
-
-        GithubFace { ink: root.ink; family: "8x2" }
-    }
-
-    // The whole practice year; see `CodingFace`.
+    // The whole activity year; see `CodingFace`.
     Component {
         id: codingBand
 

@@ -101,7 +101,7 @@ Singleton {
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],
-            github: ["2x2", "4x2", "8x2"],         coding: ["2x2", "4x2", "8x2"],
+            coding: ["2x2", "4x2", "8x2"],
             updates: ["2x2", "4x2"],                pet: ["2x2", "4x2"],
             games: ["2x2", "4x2"],                  calendar: ["2x2", "4x2", "4x4"],
             notes: ["2x2", "4x2", "4x4", "8x2"],    tasks: ["2x2", "4x2", "4x4"],
@@ -114,7 +114,7 @@ Singleton {
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],
-            github: ["2x2", "4x2", "8x2"],         coding: ["2x2", "4x2", "8x2"],
+            coding: ["2x2", "4x2", "8x2"],
             updates: ["2x2", "4x2"],                pet: ["2x2", "4x2"],
             games: ["2x2", "4x2"],                  calendar: ["2x2", "4x2", "4x4"],
             notes: ["2x2", "4x2", "4x4", "8x2"],    tasks: ["2x2", "4x2", "4x4"],
@@ -349,6 +349,10 @@ Singleton {
             const row = Object.assign({}, kept)
             if (!row.key)
                 row.key = row.id
+            // The GitHub widget became the activity one, which draws GitHub
+            // among the rest, so a wall put down before that keeps its place.
+            if (row.id === "github")
+                row.id = "coding"
             if (row.bare === true && !row.style)
                 row.style = "bare"
             delete row.bare

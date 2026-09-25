@@ -19,7 +19,8 @@ import "../../../components"
 // than 42 cells cost to lay out.
 //
 // Clicking a day with tasks due turns the card into that day's list, with a
-// way back in the corner. A row opens the task on the board.
+// way back in the corner. A row opens the task on the board. With Google
+// Calendar connected, the day's events are read in beneath the tasks.
 Card {
     id: root
 
@@ -73,6 +74,7 @@ Card {
 
         readonly property var date: TasksService.dateOf(root.picked)
         readonly property var due: TasksService.on(root.picked)
+        readonly property var events: GCalendarService.on(root.picked)
 
         RowLayout {
             Layout.fillWidth: true
@@ -129,6 +131,58 @@ Card {
                 onOpened: {
                     TasksService.open(modelData.key)
                     root.panelRequested("board")
+                }
+            }
+        }
+
+        // The day's events, beneath the tasks. A running event takes the
+        // accent; an all-day one is italic and has no time.
+        Repeater {
+            model: ScriptModel {
+                values: dayPage.events
+                objectProp: "id"
+            }
+
+            Item {
+                id: eventRow
+
+                required property var modelData
+
+                readonly property bool now: eventRow.modelData.startTime !== ""
+                    && eventRow.modelData.day === TasksService.todayKey
+                    && eventRow.modelData.startTime <= Qt.formatDateTime(clock.date, "HH:mm")
+                    && (eventRow.modelData.endTime === ""
+                        || eventRow.modelData.endTime > Qt.formatDateTime(clock.date, "HH:mm"))
+
+                Layout.fillWidth: true
+                height: 20
+
+                Row {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 7
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: eventRow.modelData.startTime !== ""
+                        text: eventRow.modelData.startTime
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontSizeLabel
+                        color: eventRow.now ? Theme.accent : Theme.textMuted
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - (eventRow.modelData.startTime !== "" ? 44 : 0)
+                        text: eventRow.modelData.title !== ""
+                            ? eventRow.modelData.title : Tr.t("(untitled event)")
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.italic: eventRow.modelData.allDay
+                        color: eventRow.now ? Theme.text : Theme.textMuted
+                    }
                 }
             }
         }
