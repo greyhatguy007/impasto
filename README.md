@@ -179,6 +179,22 @@ another, removes one, and lets you try it without locking.
 each option is drawn as the thing it changes, and profiles keep whole desks
 under names: *Moon castle*, *Fuji* and *Night bay* come with it.
 
+## Integrations
+
+**The board can have a server behind it**: point Settings → Integrations at a
+self-hosted Vikunja and the kanban syncs both ways — the server's tasks fold
+into the same list, and changes made here are sent back.
+
+**The calendar can have Google in it**: a desktop OAuth client and one press
+of Connect, and the days around the shell gain your events — blue dots on the
+month beside the task dots, events under a day's tasks in the control centre,
+a *Coming up* list in the date module, and the desktop calendar scrolling
+through weeks with every event day one click away. Read-only, and the refresh
+token is kept on the machine that connected, never in the settings file.
+
+The full walkthrough — Google Cloud setup, token storage, every status
+message and their fixes — is in [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+
 ## Installation
 
 Arch Linux, and Hyprland 0.56 or newer (tested on 0.56.2), configured in Lua.

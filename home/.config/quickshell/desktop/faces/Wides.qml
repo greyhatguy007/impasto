@@ -749,21 +749,42 @@ Item {
         }
     }
 
-    // The week around today; the month is the 4×4 face.
+    // The week around today — or any week, wheeled to — with the day's
+    // tasks and events behind a click on a date. Scrolling pages a week at a
+    // time, and the face returns to this week when the pointer leaves.
     Component {
         id: calendarWide
 
         Item {
             id: week
 
-            // Pressing a day with tasks shows that day's list, as on the 4×4.
-            // The week returns via the arrow or when the pointer leaves.
+            // Pressing a day with tasks or events shows that day's list, as
+            // on the 4×4. The week returns via the arrow or when the pointer
+            // leaves.
             property string picked: ""
 
-            HoverHandler {
+            // Weeks away from this one: 0 is the week holding today.
+            property int offset: 0
+
+            function reset(): void {
+                week.offset = 0
+            }
+
+            HoverHandler { id: over
                 onHoveredChanged: {
                     if (!hovered)
-                        week.picked = ""
+                        week.reset()
+                }
+            }
+
+            WheelHandler {
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                // One week a notch, backwards above, forwards below, in the
+                // direction a list scrolls. Reset only when back on this week.
+                onWheel: event => {
+                    week.offset += event.angleDelta.y > 0 ? -1 : 1
+                    if (week.offset === 0)
+                        week.reset()
                 }
             }
 
@@ -780,13 +801,25 @@ Item {
 
                 readonly property date today: calendarClock.date
 
-                // The same label and reading as the square, so the wide face
-                // adds the week without rearranging anything.
-                label: Qt.formatDateTime(calendarClock.date, "MMMM")
+                // The Monday opening the week shown, today's week at rest.
+                readonly property date weekStart: {
+                    const base = new Date(calendarFace.today)
+                    base.setDate(base.getDate() - (base.getDay() + 6) % 7
+                                 + week.offset * 7)
+                    return base
+                }
+
+                // The label becomes the week shown, so paging is legible; the
+                // reading stays today's date, and a wheel back home says so.
+                label: week.offset === 0
+                    ? Qt.formatDateTime(calendarClock.date, "MMMM")
+                    : Qt.formatDate(calendarFace.weekStart, "d MMM")
                 reading: `${calendarFace.today.getDate()}`
                 // Today's count if any; else the next task due; else the
                 // weekday.
                 note: {
+                    if (week.offset !== 0)
+                        return `${week.offset < 0 ? "−" : "+"}${Math.abs(week.offset)} wk`
                     const left = TasksService.pendingOn(TasksService.todayKey)
                     if (left > 0)
                         return `${left} to do today`
@@ -822,21 +855,26 @@ Item {
 
                                 required property int index
 
-                                // Monday first, the way the month is laid out.
+                                // The seven days from the week's Sunday.
                                 readonly property date date: {
-                                    const base = new Date(calendarFace.today)
-                                    const shift = (base.getDay() + 6) % 7
-                                    base.setDate(base.getDate() - shift + day.index)
+                                    const base = new Date(calendarFace.weekStart)
+                                    base.setDate(base.getDate() + day.index)
                                     return base
                                 }
 
                                 readonly property bool today:
                                     day.date.getDate() === calendarFace.today.getDate()
                                     && day.date.getMonth() === calendarFace.today.getMonth()
+                                    && day.date.getFullYear() === calendarFace.today.getFullYear()
+
+                                readonly property bool outside:
+                                    day.date.getMonth() !== calendarFace.today.getMonth()
+                                    && week.offset === 0
 
                                 readonly property string key: TasksService.dayKey(day.date)
                                 readonly property int tasks: TasksService.countOn(day.key)
                                 readonly property int pending: TasksService.pendingOn(day.key)
+                                readonly property int events: GCalendarService.on(day.key).length
 
                                 width: parent.width / 7
                                 height: parent.height
@@ -861,37 +899,40 @@ Item {
 
                                         Text {
                                             anchors.centerIn: parent
-                                            anchors.verticalCenterOffset: day.tasks > 0 ? -1 : 0
+                                            anchors.verticalCenterOffset: day.tasks > 0 || day.events > 0 ? -1 : 0
                                             text: `${day.date.getDate()}`
                                             font.family: Theme.fontFamily
                                             font.pixelSize: Theme.fontSizeSmall
                                             font.weight: day.today ? Font.DemiBold : Font.Normal
                                             color: day.today ? root.ink.accentText : root.ink.text
+                                            opacity: day.outside ? 0.45 : 1
                                         }
 
-                                        // A task due that day: the accent while
-                                        // any is open, muted once done.
+                                        // A task due (accent while any is open,
+                                        // muted once done) or an event (blue).
                                         Rectangle {
                                             anchors.horizontalCenter: parent.horizontalCenter
                                             anchors.bottom: parent.bottom
                                             anchors.bottomMargin: 2
-                                            visible: day.tasks > 0
+                                            visible: day.tasks > 0 || day.events > 0
                                             width: 3
                                             height: 3
                                             radius: 1.5
                                             color: day.today ? root.ink.accentText
-                                                : (day.pending > 0 ? root.ink.accent : root.ink.muted)
+                                                : (day.tasks > 0
+                                                    ? (day.pending > 0 ? root.ink.accent : root.ink.muted)
+                                                    : Theme.blue)
                                         }
                                     }
                                 }
 
                                 HoverHandler {
-                                    enabled: day.tasks > 0
+                                    enabled: day.tasks > 0 || day.events > 0
                                     cursorShape: Qt.PointingHandCursor
                                 }
 
                                 TapHandler {
-                                    enabled: day.tasks > 0
+                                    enabled: day.tasks > 0 || day.events > 0
                                     gesturePolicy: TapHandler.ReleaseWithinBounds
                                     onTapped: week.picked = day.key
                                 }

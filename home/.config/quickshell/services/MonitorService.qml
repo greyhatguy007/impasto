@@ -222,6 +222,12 @@ Singleton {
         const found = root.monitorFor(description)
         if (!found)
             return false
+        // A rule just pushed and refused outright — a field the compositor
+        // accepts but will not honour on this screen, VRR on a panel without
+        // the capability — would otherwise be pushed again forever: apply,
+        // re-read, differ, apply. Once is enough until something real changes.
+        if (root.sameRule(rule, root.lastPushed[description]))
+            return false
         // Only when the rule sets it. A rule without `disabled` must not force
         // the laptop panel back on right after the lid closes.
         if (rule.disabled !== undefined && rule.disabled !== found.disabled)
@@ -234,6 +240,22 @@ Singleton {
             || (rule.transform !== undefined && Number(rule.transform) !== Number(found.transform))
             || (rule.mirror !== undefined && rule.mirror !== found.mirror)
             || (rule.vrr !== undefined && Number(rule.vrr) !== Number(found.vrr))
+    }
+
+    function sameRule(a: var, b: var): bool {
+        if (!a || !b)
+            return false
+        for (const key in a) {
+            if (b[key] === undefined)
+                return false
+            if (typeof a[key] === "number" || typeof b[key] === "number") {
+                if (Number(a[key]) !== Number(b[key]))
+                    return false
+            } else if (a[key] !== b[key]) {
+                return false
+            }
+        }
+        return true
     }
 
     function applyProfile(): void {
@@ -249,10 +271,17 @@ Singleton {
         }
         if (rules.length === 0)
             return
+        for (const rule of rules)
+            root.lastPushed[rule.output.slice(5)] = rule
         root.settling.restart()
         root.applier.command = [root.script, "apply", JSON.stringify(rules)]
         root.applier.running = true
     }
+
+    // What this session has already sent, by description. Cleared when the
+    // compositor reloads its config, which is the one moment it genuinely
+    // forgets and the rules are worth sending again.
+    property var lastPushed: ({})
 
     // ── RECOVERY ────────────────────────────────────────────────────────────
     //
@@ -420,6 +449,11 @@ Singleton {
         function onRawEvent(event): void {
             switch (event.name) {
             case "configreloaded":
+                // Hyprland has gone back to the Lua config: everything this
+                // session pushed is forgotten and is worth sending again.
+                root.lastPushed = ({})
+                root.hotplug.restart()
+                break
             case "monitoradded":
             case "monitoraddedv2":
             case "monitorremoved":

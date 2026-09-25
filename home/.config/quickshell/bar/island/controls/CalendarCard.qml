@@ -316,6 +316,7 @@ Card {
                         ? TasksService.dayKey(new Date(root.year, root.month, cell.day)) : ""
                     readonly property int tasks: cell.key !== "" ? TasksService.countOn(cell.key) : 0
                     readonly property int pending: cell.key !== "" ? TasksService.pendingOn(cell.key) : 0
+                    readonly property int events: cell.key !== "" ? GCalendarService.on(cell.key).length : 0
 
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -346,27 +347,29 @@ Card {
                         }
 
                         // Tasks due: accent while any is open, muted once all
-                        // are done.
+                        // are done. A day with only events takes blue.
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.bottom: parent.bottom
                             anchors.bottomMargin: 3
-                            visible: cell.tasks > 0
+                            visible: cell.tasks > 0 || cell.events > 0
                             width: 3
                             height: 3
                             radius: 1.5
                             color: cell.isToday ? Theme.accentText
-                                : (cell.pending > 0 ? Theme.accent : Theme.textMuted)
+                                : (cell.tasks > 0
+                                    ? (cell.pending > 0 ? Theme.accent : Theme.textMuted)
+                                    : Theme.blue)
                         }
 
-                        // Only days with tasks are clickable.
+                        // Days with tasks or events are clickable.
                         HoverHandler {
-                            enabled: cell.tasks > 0
+                            enabled: cell.tasks > 0 || cell.events > 0
                             cursorShape: Qt.PointingHandCursor
                         }
 
                         TapHandler {
-                            enabled: cell.tasks > 0
+                            enabled: cell.tasks > 0 || cell.events > 0
                             gesturePolicy: TapHandler.ReleaseWithinBounds
                             onTapped: root.picked = cell.key
                         }

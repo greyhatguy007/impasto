@@ -358,6 +358,70 @@ Item {
                             }
                         }
                     }
+
+                    // What is coming, while today is the day shown and the
+                    // day itself has nothing on: the next events from tomorrow
+                    // on, wherever in the month they sit.
+                    Repeater {
+                        model: ScriptModel {
+                            values: page.onToday && GCalendarService.available
+                                    && page.events.length === 0
+                                ? GCalendarService.upcoming
+                                    .filter(event => event.day > TasksService.todayKey)
+                                    .slice(0, 2)
+                                : []
+                            objectProp: "id"
+                        }
+
+                        Item {
+                            id: nextRow
+
+                            required property var modelData
+
+                            readonly property string when:
+                                Qt.formatDate(TasksService.dateOf(nextRow.modelData.day), "d MMM")
+
+                            width: parent.width
+                            height: 18
+
+                            Row {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.leftMargin: 4
+                                anchors.rightMargin: 4
+                                spacing: 6
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "󰃭"
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 11
+                                    color: Theme.blue
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: nextRow.when
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: 10
+                                    color: Theme.textMuted
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - 44
+                                    text: nextRow.modelData.title !== ""
+                                        ? nextRow.modelData.title : Tr.t("(untitled event)")
+                                    elide: Text.ElideRight
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.italic: nextRow.modelData.allDay
+                                    color: Theme.text
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

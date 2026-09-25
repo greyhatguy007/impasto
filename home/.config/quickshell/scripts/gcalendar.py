@@ -55,7 +55,9 @@ SCOPE = "https://www.googleapis.com/auth/calendar.readonly"
 PORT = 16531
 AUTH_BUDGET = 300
 DAYS_BACK = 7
-DAYS_AHEAD = 21
+# A quarter ahead: dots far out (a December date in September) have to be in
+# the data before any face can draw them.
+DAYS_AHEAD = 90
 MAX_EVENTS = 250
 
 ZERO_DATE = "0001-01-01"
