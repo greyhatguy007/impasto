@@ -647,6 +647,10 @@ Item {
                     text: LyricsService.display !== "" ? LyricsService.display
                         : (MediaService.available ? MediaService.artist : "no player")
                     elide: Text.ElideRight
+                    // A lyric is worth two lines; the spacer below gives up
+                    // the height, so nothing else moves.
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall
                     color: root.ink.muted

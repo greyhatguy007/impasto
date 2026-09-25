@@ -37,6 +37,10 @@ Item {
     property string note: ""
     property color tint: root.ink.text
 
+    // The note is one elided line by default; a face with the room for it
+    // (a lyric, say) asks for two.
+    property bool noteWrap: false
+
     // Set by faces that fill `extra`, so the text moves up to make room; a
     // binding cannot count a list property's children.
     property bool filled: false
@@ -109,10 +113,25 @@ Item {
             visible: root.note !== ""
             text: root.note
             elide: Text.ElideRight
+            wrapMode: root.noteWrap ? Text.Wrap : Text.NoWrap
+            maximumLineCount: root.noteWrap ? 2 : 1
+            // The second line's room is kept whether or not it is used, and
+            // the text stays on the last line, so a line arriving or leaving
+            // moves `extra` below it.
+            height: root.noteWrap ? noteLine.height * 2 : implicitHeight
+            verticalAlignment: root.noteWrap ? Text.AlignBottom : Text.AlignTop
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeRegular
             color: root.ink.muted
         }
+    }
+
+    // The height of one note line, kept so `noteWrap` can reserve two.
+    FontMetrics {
+        id: noteLine
+
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.fontSizeRegular
     }
 
     Item {

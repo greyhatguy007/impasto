@@ -622,6 +622,8 @@ Item {
             note: LyricsService.display !== "" ? LyricsService.display
                 : (!MediaService.available ? "no player"
                     : (MediaService.playing ? "playing" : "paused"))
+            // A lyric is worth two lines; the reading above it is short.
+            noteWrap: true
             extraShare: 0.4
 
             ClippingRectangle {

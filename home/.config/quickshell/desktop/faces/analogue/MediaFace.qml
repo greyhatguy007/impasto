@@ -48,6 +48,8 @@ Instrument {
         : face.something
             ? `${MediaService.artist !== "" ? MediaService.artist + " · " : ""}${MediaService.playing ? "playing" : "paused"}`
             : "no player on the bus"
+    // A lyric is worth two lines; the column has the room beside the record.
+    noteWrap: true
     filled: true
 
     Record {

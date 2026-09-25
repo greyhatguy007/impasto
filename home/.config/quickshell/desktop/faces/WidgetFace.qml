@@ -28,8 +28,12 @@ Item {
     property string reading: ""
 
     // Qualifies the reading: time remaining, location, the timer's label. One
-    // line, elided.
+    // line, elided — unless a face with the room for it asks (`noteWrap`),
+    // which lets a caption take two.
     property string note: ""
+
+    // For a caption worth reading rather than skimming, e.g. a lyric line.
+    property bool noteWrap: false
 
     // Colours resolved by the widget from its ink and style.
     property var ink: DesktopService.inkFor(null)
@@ -138,10 +142,27 @@ Item {
             visible: root.note !== ""
             text: root.note
             elide: Text.ElideRight
+            wrapMode: root.noteWrap ? Text.Wrap : Text.NoWrap
+            // Two lines with an ellipsis after them, or the one line this
+            // caption has always had.
+            maximumLineCount: root.noteWrap ? 2 : 1
+            // The second line's room is kept whether or not it is used, and
+            // the text stays on the last line, so a line arriving or leaving
+            // moves nothing above it.
+            height: root.noteWrap ? noteLine.height * 2 : implicitHeight
+            verticalAlignment: root.noteWrap ? Text.AlignBottom : Text.AlignTop
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
             color: root.ink.muted
         }
+    }
+
+    // The height of one caption line, kept so `noteWrap` can reserve two.
+    FontMetrics {
+        id: noteLine
+
+        font.family: Theme.fontFamily
+        font.pixelSize: Theme.fontSizeSmall
     }
 
     // Under the label rather than beside the mark, so the label has the top
