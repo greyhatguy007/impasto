@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
-// │   C   L   A   U   D   E       F   A   C   E                              │
-// │   claude code usage as a fuel gauge                                      │
+// │   A I       F   A   C   E                                                  │
+// │   assistant usage as a fuel gauge                                         │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -14,35 +14,38 @@ import "../../../theme"
 import "../../../services"
 import "../../../components"
 
-// Claude usage as a fuel gauge: F with the block untouched, E when it is spent,
-// red at the empty end. Uses the account's figure when available, else the
-// block's elapsed time.
+// Assistant usage as a fuel gauge: F with the quota untouched, E when it is
+// spent, red at the empty end. The ring is measured against the limit in the
+// settings; with no limit set it shows the block's own elapsed time, which is
+// a guess, and the line says so rather than quoting a percentage of nothing.
 Instrument {
     id: face
 
-    readonly property string figure: !ClaudeService.available ? "—"
-        : ClaudeService.sessionMeasured
-        ? ClaudeService.percent(ClaudeService.sessionFraction)
-        : ClaudeService.compact(ClaudeService.blockTokens)
+    readonly property string figure: !AiUsageService.available ? "—"
+        : AiUsageService.sessionMeasured
+        ? AiUsageService.percent(AiUsageService.sessionFraction)
+        : AiUsageService.compact(AiUsageService.blockTokens)
 
-    line: !ClaudeService.available ? "No usage found"
-        : (ClaudeService.sessionMeasured ? `${face.figure} of this block` : `${face.figure} this block`)
+    line: !AiUsageService.available ? "No usage found"
+        : (AiUsageService.sessionMeasured
+            ? `${face.figure} of the block`
+            : `${face.figure} this block`)
     reading: face.figure
-    note: !ClaudeService.available ? "no usage found"
-        : ClaudeService.sessionMeasured
-        ? `of this block · resets in ${ClaudeService.resetsIn}`
-        : `this block · resets in ${ClaudeService.resetsIn}`
+    note: !AiUsageService.available ? "no usage found"
+        : AiUsageService.sessionMeasured
+        ? `of the block · ${AiUsageService.resetsIn}`
+        : `this block · ${AiUsageService.resetsIn}`
     filled: true
 
     Gauge {
         anchors.centerIn: parent
         ink: face.ink
         size: Math.min(parent.width, parent.height)
-        fraction: 1 - ClaudeService.gauge
+        fraction: 1 - AiUsageService.gauge
         lowIsBad: true
         ends: ["E", "F"]
 
-        ClaudeMark {
+        AiMark {
             x: (parent.width - width) / 2
             y: parent.height * 0.28
             width: 22
@@ -60,14 +63,15 @@ Instrument {
 
             UsageBar {
                 width: parent.width
-                progress: ClaudeService.weeklyFraction
+                progress: AiUsageService.weekBarFraction
                 fillColor: face.ink.accent
                 trackColor: face.ink.raised
             }
 
             Text {
-                text: ClaudeService.weeklyMeasured
-                    ? `${ClaudeService.percent(ClaudeService.weeklyFraction)} of the week` : "this week"
+                text: AiUsageService.weeklyMeasured
+                    ? `${AiUsageService.percent(AiUsageService.weeklyFraction)} of the week`
+                    : "this week"
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeLabel
                 color: face.ink.muted

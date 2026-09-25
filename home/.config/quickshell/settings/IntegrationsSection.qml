@@ -26,6 +26,56 @@ SettingsSection {
     // The visible part; set by `SettingsPanel`.
     property string tab: ""
 
+    // One choice in a row of short names, for the two lists that are a list of
+    // names rather than a value: which transcripts to count, and which paired
+    // device to ask. Written once here because both want the same pill, and a
+    // segment control would be for two or three options where this is a hand
+    // of them.
+    component SourcePill: Rectangle {
+        id: pill
+
+        property string text: ""
+        property bool chosen: false
+        // Dimmed rather than hidden: a source this machine has no transcripts
+        // for is worth showing, so the list does not quietly change with what
+        // happens to be installed.
+        property bool dimmed: false
+
+        signal picked()
+
+        implicitWidth: caption.implicitWidth + 26
+        implicitHeight: 30
+        radius: Theme.radiusSmall
+        color: pill.chosen ? Theme.accent
+            : (mouse.containsMouse ? Theme.islandSurfaceHover : Theme.islandSurface)
+        border.width: 1
+        border.color: pill.chosen ? Theme.accent : Theme.islandBorder
+        opacity: pill.dimmed ? 0.5 : 1
+
+        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+        Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
+        Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
+
+        Text {
+            id: caption
+
+            anchors.centerIn: parent
+            text: pill.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+            color: pill.chosen ? Theme.accentText : Theme.text
+        }
+
+        MouseArea {
+            id: mouse
+
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: pill.picked()
+        }
+    }
+
     // What the project setting resolves to, so the id is not the only thing
     // on screen.
     readonly property string projectNote: {
@@ -76,31 +126,56 @@ SettingsSection {
             ? Tr.t("event in view") : Tr.t("events in view")}`
     }
 
-    // What the wallpaper gallery resolves to, so the key is not the only
-    // thing on screen.
+    // What the wallpaper gallery resolves to, so the source and the key are
+    // not the only thing on screen.
     readonly property string wallpaperNote: {
-        if (UnsplashService.busy)
-            return Tr.t("Reaching the provider…")
-        if (UnsplashService.reason === "auth")
+        if (WallpaperFeed.busy)
+            return Tr.t("Reaching the source…")
+        if (WallpaperFeed.reason === "auth")
             return Tr.t("The key was refused — check it and browse again")
-        if (UnsplashService.reason === "setup")
-            return Tr.t("No provider yet")
-        if (UnsplashService.reason !== "")
-            return Tr.t("The provider did not answer")
-        if (UnsplashService.provider === "picsum")
-            return Tr.t("Picsum — free, no key; add an Unsplash key for topics")
-        if (UnsplashService.provider === "unsplash")
-            return Tr.t("Unsplash — your key, your topic")
+        if (WallpaperFeed.reason === "setup")
+            return WallpaperFeed.sources.length > 0
+                ? WallpaperFeed.sources.find(entry => entry.id === WallpaperFeed.provider)?.note
+                    ?? Tr.t("This source needs a key")
+                : Tr.t("No source yet")
+        if (WallpaperFeed.reason === "provider")
+            return Tr.t("Nothing that size for that topic")
+        if (WallpaperFeed.reason !== "")
+            return Tr.t("The source did not answer")
+        if (WallpaperFeed.photos.length > 0)
+            return `${Tr.t("Browse again for another set")}`
         return Tr.t("Browse to fill the gallery")
     }
 
     // Which photo is coming down, for the browse row's reading.
     readonly property string fetchNote: {
-        if (UnsplashService.fetchingId === "")
+        if (WallpaperFeed.fetchingId === "")
             return ""
-        const photo = UnsplashService.photos.find(
-            entry => entry.id === UnsplashService.fetchingId)
+        const photo = WallpaperFeed.photos.find(
+            entry => entry.id === WallpaperFeed.fetchingId)
         return photo ? `${Tr.t("Fetching")} — ${photo.artist}` : Tr.t("Fetching")
+    }
+
+    // Where the assistant figures come from, said the way a desk needs it: the
+    // transcripts it is reading and the quota, if any, they are read against.
+    readonly property string usageNote: {
+        if (!AiUsageService.available)
+            return Tr.t("No transcripts found")
+        const where = AiUsageService.label !== ""
+            ? AiUsageService.label : Tr.t("every assistant found")
+        return AiUsageService.measured
+            ? `${where} · ${AiUsageService.messages(AiUsageService.blockMessages)} ${Tr.t("in this block")}`
+            : `${where} · ${Tr.t("no quota set — showing the block's time")}`
+    }
+
+    readonly property string phoneNote: {
+        if (!KdeConnectService.available)
+            return KdeConnectService.statusNote
+        if (KdeConnectService.hasBattery)
+            return `${KdeConnectService.name} · ${KdeConnectService.battery}%`
+                + (KdeConnectService.charging ? ` · ${Tr.t("charging")}` : "")
+        return `${KdeConnectService.name} · ${KdeConnectService.type === "tablet"
+            ? Tr.t("tablet") : Tr.t("phone")}`
     }
 
     ColumnLayout {
@@ -245,7 +320,7 @@ SettingsSection {
 
     // ── WALLPAPER ───────────────────────────────────────────────────────────
     //
-    // Unsplash with an access key, Picsum without one. A search fills the
+    // A source the settings name, at the width they name. A search fills the
     // gallery; a picture is fetched into the wallpaper directory and applied
     // with one click. One row per control, in the section's card.
     ColumnLayout {
@@ -257,55 +332,164 @@ SettingsSection {
 
         // The service works for whoever holds it, like the other
         // subscription services; the settings window holds it while open.
-        Component.onCompleted: UnsplashService.subscribe()
-        Component.onDestruction: UnsplashService.release()
+        Component.onCompleted: WallpaperFeed.subscribe()
+        Component.onDestruction: WallpaperFeed.release()
 
         SettingGroup {
             title: Tr.t("Wallpaper gallery")
-            note: Tr.t("Photographs from Unsplash — or Picsum, free and keyless.")
-            hint: Tr.t("Browse asks the provider for pictures on the topic and fills the gallery below; pick one to fetch it into your wallpapers and apply it, and the palette follows the new picture. An access key from unsplash.com/developers turns the topic into a real search; without one, Picsum serves a curated pick and the topic only seeds it. The key is kept on this machine.")
+            note: Tr.t("Photographs from whichever source you name, at the width your screens are.")
+            hint: Tr.t("Browse asks the source for pictures on the topic and fills the gallery below; pick one to fetch it into your wallpapers and apply it, and the palette follows the new picture. Two of the sources are free and need no account; Unsplash and Pexels search properly with a key from their developers' pages, which is kept on this machine. The width is what the panel is about to fill, so a source is never asked for a picture smaller than the screen.")
+
+            // One tile per source, each saying what it costs. The key field
+            // only appears for the two that want one, rather than sitting
+            // there uselessly for the three that do not.
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Repeater {
+                    model: WallpaperFeed.sources
+
+                    delegate: Rectangle {
+                        id: sourceTile
+
+                        required property var modelData
+                        readonly property bool chosen:
+                            SettingsService.wallpaperProvider === modelData.id
+
+                        width: 186
+                        height: 62
+                        radius: Theme.radiusSmall
+                        color: sourceTile.chosen ? Theme.accent
+                            : (sourceMouse.containsMouse ? Theme.islandSurfaceHover
+                                : Theme.islandSurface)
+                        border.width: 1
+                        border.color: sourceTile.chosen ? Theme.accent : Theme.islandBorder
+
+                        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 9
+                            spacing: 2
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+
+                                Text {
+                                    text: sourceTile.modelData.label
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.weight: Font.DemiBold
+                                    color: sourceTile.chosen ? Theme.accentText : Theme.text
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                // A source that was asked and had nothing to
+                                // say is marked, so a wrong key is visible
+                                // without opening a log.
+                                Text {
+                                    visible: sourceTile.modelData.searched
+                                        && !sourceTile.modelData.available
+                                    text: "󰅚"
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.indicatorBad
+                                }
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: sourceTile.modelData.note
+                                elide: Text.ElideRight
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeLabel
+                                color: sourceTile.chosen ? Theme.accentText
+                                    : Theme.textMuted
+                            }
+                        }
+
+                        MouseArea {
+                            id: sourceMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: SettingsService.set(
+                                "wallpaperProvider", modelData.id)
+                        }
+                    }
+                }
+            }
 
             SettingField {
                 label: Tr.t("Topic")
                 placeholder: Tr.t("nature, fog, brutalism…")
-                value: SettingsService.unsplashQuery
-                onEdited: value => SettingsService.set("unsplashQuery", value.trim())
+                value: SettingsService.wallpaperQuery
+                onEdited: value => SettingsService.set("wallpaperQuery", value.trim())
+            }
+
+            // The width a source is asked for. A picture smaller than the
+            // screen is the one mistake the shell cannot fix afterwards, so
+            // the presets are the desktop's own resolutions and the field
+            // takes any of them.
+            SettingRow {
+                label: Tr.t("Width")
+                reading: `${SettingsService.wallpaperWidth}px`
+
+                Row {
+                    spacing: 6
+
+                    Repeater {
+                        model: [1920, 2560, 3440, 3840]
+
+                        delegate: PillButton {
+                            required property int modelData
+
+                            text: `${modelData}`
+                            active: SettingsService.wallpaperWidth === modelData
+                            onClicked: SettingsService.set("wallpaperWidth", modelData)
+                        }
+                    }
+                }
             }
 
             SettingField {
+                visible: WallpaperFeed.needsKey
                 label: Tr.t("Access key")
                 secret: true
-                placeholder: Tr.t("Optional — from unsplash.com/developers")
-                value: SettingsService.unsplashKey
-                onEdited: value => SettingsService.set("unsplashKey", value.trim())
+                placeholder: Tr.t("From the source's developers' page")
+                value: SettingsService.wallpaperKey
+                onEdited: value => SettingsService.set("wallpaperKey", value.trim())
             }
 
             SettingRow {
                 label: Tr.t("Gallery")
                 reading: root.wallpaperNote
-                alarm: UnsplashService.reason === "auth"
+                alarm: WallpaperFeed.reason === "auth" || WallpaperFeed.reason === "provider"
 
                 Row {
                     spacing: 8
 
                     PillButton {
-                        text: UnsplashService.busy ? "…" : Tr.t("Browse")
+                        text: WallpaperFeed.busy ? "…" : Tr.t("Browse")
                         icon: "󰸉"
-                        enabled: !UnsplashService.busy
+                        enabled: !WallpaperFeed.busy
                         onClicked: {
                             root.skipFetching()
-                            UnsplashService.refresh()
+                            WallpaperFeed.refresh()
                         }
                     }
 
                     PillButton {
                         text: Tr.t("Shuffle")
                         icon: "󰒝"
-                        enabled: !UnsplashService.busy && UnsplashService.photos.length > 0
+                        enabled: !WallpaperFeed.busy && WallpaperFeed.photos.length > 0
                         onClicked: {
                             root.skipFetching()
                             root.shuffled = (root.shuffled + 1) % 100
-                            UnsplashService.refreshWithVariation(root.shuffled)
+                            WallpaperFeed.refreshWithVariation(root.shuffled)
                         }
                     }
                 }
@@ -314,15 +498,15 @@ SettingsSection {
             SettingRow {
                 label: Tr.t("Fetch & apply")
                 reading: root.fetchNote !== "" ? root.fetchNote
-                    : (UnsplashService.photos.length === 0
+                    : (WallpaperFeed.photos.length === 0
                         ? Tr.t("Browse first, then pick")
                         : Tr.t("Pick a picture below"))
 
                 PillButton {
                     text: Tr.t("Shuffle wallpaper")
                     icon: "󰒘"
-                    enabled: UnsplashService.photos.length > 0
-                        && UnsplashService.fetchingId === ""
+                    enabled: WallpaperFeed.photos.length > 0
+                        && WallpaperFeed.fetchingId === ""
                     onClicked: root.shuffleWallpaper()
                 }
             }
@@ -332,19 +516,19 @@ SettingsSection {
         // picture, applied when it lands. Emptied by a topic change.
         Flow {
             Layout.fillWidth: true
-            visible: UnsplashService.photos.length > 0
+            visible: WallpaperFeed.photos.length > 0
             spacing: 10
 
             Repeater {
-                model: UnsplashService.photos
+                model: WallpaperFeed.photos
 
                 delegate: Rectangle {
                     id: tile
 
                     required property var modelData
-                    readonly property bool fetched: UnsplashService.isFetched(modelData.id)
+                    readonly property bool fetched: WallpaperFeed.isFetched(modelData.id)
                     readonly property bool fetching:
-                        UnsplashService.fetchingId === modelData.id
+                        WallpaperFeed.fetchingId === modelData.id
 
                     width: 108
                     height: 72
@@ -389,9 +573,9 @@ SettingsSection {
                             if (tile.fetching)
                                 return
                             if (tile.fetched)
-                                UnsplashService.applyFetched(tile.modelData)
+                                WallpaperFeed.applyFetched(tile.modelData)
                             else
-                                UnsplashService.fetch(tile.modelData)
+                                WallpaperFeed.fetch(tile.modelData)
                         }
                     }
 
@@ -413,7 +597,7 @@ SettingsSection {
 
         SettingRow {
             label: Tr.t("Stop fetching")
-            visible: UnsplashService.fetchingId !== ""
+            visible: WallpaperFeed.fetchingId !== ""
             reading: root.fetchNote
 
             PillButton {
@@ -424,24 +608,279 @@ SettingsSection {
         }
     }
 
+    // ── ASSISTANT USAGE ────────────────────────────────────────────────────
+    //
+    // The usage module reads the transcripts the assistants already write on
+    // this machine, so there is no account to connect and no key to paste.
+    // What it cannot know is the ceiling those transcripts are measured
+    // against: the plan's quota is a number only the user has, and without it
+    // the ring shows the block's elapsed time and says so.
+    ColumnLayout {
+        id: usageTab
+
+        Layout.fillWidth: true
+        spacing: root.spacing
+        visible: root.tab === "usage"
+
+        // Reading the service is cheap and lazy; the settings holding it open
+        // is enough, and it only costs anything when something changes.
+        Component.onCompleted: AiUsageService.subscribe()
+        Component.onDestruction: AiUsageService.release()
+
+        SettingGroup {
+            title: Tr.t("Assistant usage")
+            note: Tr.t("Tokens for the current block and the last seven days, read from the transcripts on this machine.")
+            hint: Tr.t("Nothing is sent anywhere: the numbers are counted from the transcripts each assistant already writes on disk. A block runs five hours from its first message, so the countdown to the reset is exact. Without a quota the ring shows how long the block has been running and no percentage is claimed, since a percentage of what? Put your plan's limits below and the bar is measured against them, and the face turns red as the block runs out.")
+
+            // Which assistant to measure. "Every one" sums the transcripts
+            // of all of them, which is the honest answer for a desk that
+            // uses more than one and no honest answer at all for a plan that
+            // charges per account. The list is the script's: it is what knows
+            // which transcripts exist, and a source whose folder is not there
+            // is drawn dim rather than hidden, so a machine that has not used
+            // one still says so.
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Repeater {
+                    model: AiUsageService.sources
+
+                    delegate: SourcePill {
+                        required property var modelData
+
+                        text: modelData.label
+                        chosen: SettingsService.aiProvider === modelData.id
+                        dimmed: !modelData.ready
+                        onPicked: SettingsService.set("aiProvider", modelData.id)
+                    }
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("This block")
+                reading: root.usageNote
+                alarm: !AiUsageService.available
+
+                Figure {
+                    value: AiUsageService.available
+                        ? AiUsageService.compact(AiUsageService.blockTokens) : "—"
+                    note: {
+                        if (!AiUsageService.available)
+                            return Tr.t("no transcripts found")
+                        return `${AiUsageService.messages(AiUsageService.blockMessages)} · ${AiUsageService.resetsIn}`
+                    }
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("This week")
+                reading: {
+                    if (!AiUsageService.available)
+                        return ""
+                    return `${AiUsageService.compact(AiUsageService.weekTokens)} ${Tr.t("tokens")} · ${AiUsageService.models.length} ${Tr.t("models")}`
+                }
+
+                Figure {
+                    value: AiUsageService.available
+                        ? AiUsageService.percent(AiUsageService.weeklyFraction) : "—"
+                    note: {
+                        if (!AiUsageService.available)
+                            return ""
+                        return AiUsageService.weeklyMeasured
+                            ? Tr.t("of the week's quota")
+                            : Tr.t("of the busiest week on record")
+                    }
+                }
+            }
+        }
+
+        SettingGroup {
+            title: Tr.t("Quotas")
+            note: Tr.t("What to measure the block and the week against.")
+            hint: Tr.t("The limits your plan charges you are not written down anywhere the shell can read, so they are asked for here. Set them and the usage face fills against them, going amber at 60% and red at 90%. Leave one at zero and that bar falls back to the block's own clock rather than inventing a percentage.")
+
+            SettingSlider {
+                label: Tr.t("Block quota")
+                from: 0
+                to: 4000000
+                stepSize: 100000
+                value: SettingsService.aiBlockQuota
+                reading: {
+                    if (SettingsService.aiBlockQuota <= 0)
+                        return Tr.t("Not set — the block's clock instead")
+                    return `${Math.round(SettingsService.aiBlockQuota / 1000)}k ${Tr.t("tokens per block")}`
+                }
+                onMoved: value => SettingsService.set("aiBlockQuota", Math.round(value))
+            }
+
+            SettingSlider {
+                label: Tr.t("Week quota")
+                from: 0
+                to: 40000000
+                stepSize: 1000000
+                value: SettingsService.aiWeekQuota
+                reading: {
+                    if (SettingsService.aiWeekQuota <= 0)
+                        return Tr.t("Not set — the busiest week on record instead")
+                    return `${Math.round(SettingsService.aiWeekQuota / 1000000)}M ${Tr.t("tokens a week")}`
+                }
+                onMoved: value => SettingsService.set("aiWeekQuota", Math.round(value))
+            }
+        }
+
+        SettingGroup {
+            title: Tr.t("Transcripts")
+            note: Tr.t("Where to read them, for a home directory that is not where the shell looks.")
+            hint: Tr.t("Each assistant keeps its history in its own place, and the shell reads all the ones it knows. If yours lives somewhere else — a second machine's disk, an encrypted mount, a container — write the extra directories here, one per line, and they are read alongside the usual ones.")
+
+            SettingField {
+                label: Tr.t("Extra directories")
+                placeholder: Tr.t("/mnt/work/agents, /srv/logs/codex")
+                value: SettingsService.aiLogs
+                onEdited: value => SettingsService.set("aiLogs", value.trim())
+            }
+
+            SettingField {
+                label: Tr.t("pi's logs")
+                placeholder: Tr.t("~/.pi/agent/sessions")
+                value: SettingsService.aiPiLogs
+                onEdited: value => SettingsService.set("aiPiLogs", value.trim())
+            }
+        }
+    }
+
+    // ── PHONE ───────────────────────────────────────────────────────────────
+    //
+    // KDE Connect, which is a pair and a socket and nothing else: the phone
+    // is found on the network, and everything below is one of the things that
+    // pairing makes possible. Which of them are offered is the phone's to
+    // refuse, so this shows what it answered rather than what KDE Connect can
+    // do in general.
+    ColumnLayout {
+        id: phoneTab
+
+        Layout.fillWidth: true
+        spacing: root.spacing
+        visible: root.tab === "phone"
+
+        Component.onCompleted: KdeConnectService.subscribe()
+        Component.onDestruction: KdeConnectService.release()
+
+        SettingGroup {
+            title: Tr.t("Paired phone")
+            note: Tr.t("The phone on this network, and what it will do when asked.")
+            hint: Tr.t("KDE Connect pairs over the local network and does not need a server or an account. The phone's charge takes the ring on the bar beside the laptop's own battery, and the module's buttons are the things this particular pairing offers — a phone that refuses to be rung is not shown a bell. Music played on the phone can take over the desk's player, so the keys and the bar control it as if it were local.")
+
+            // The paired devices the daemon knows, as tiles. One phone on a
+            // desk is the common case and needs no choice at all, so the
+            // automatic tile is first and the rest are the alternative.
+            Flow {
+                Layout.fillWidth: true
+                visible: KdeConnectService.devices.length > 0
+                spacing: 8
+
+                Repeater {
+                    model: [{ id: "", name: Tr.t("The one that answers"), type: "" }]
+                            .concat(KdeConnectService.devices.map(
+                                entry => ({ id: entry.id, name: entry.name,
+                                    type: entry.type })))
+
+                    delegate: SourcePill {
+                        required property var modelData
+
+                        text: modelData.name
+                            + (modelData.type === "tablet" ? " (tablet)" : "")
+                        chosen: SettingsService.kdeconnectDevice === modelData.id
+                        onPicked: {
+                            SettingsService.set("kdeconnectDevice", modelData.id)
+                            KdeConnectService.poll()
+                        }
+                    }
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("Phone")
+                reading: root.phoneNote
+                alarm: !KdeConnectService.available && KdeConnectService.reason === "pairing"
+
+                Row {
+                    spacing: 8
+
+                    PillButton {
+                        text: KdeConnectService.busy ? "…" : Tr.t("Find it")
+                        icon: "󰋄"
+                        enabled: !KdeConnectService.busy
+                        onClicked: KdeConnectService.refresh()
+                    }
+
+                    PillButton {
+                        text: Tr.t("Ring")
+                        icon: "󰇰"
+                        enabled: KdeConnectService.available && KdeConnectService.can.ring
+                        onClicked: KdeConnectService.ring()
+                    }
+
+                    PillButton {
+                        text: Tr.t("Ping")
+                        icon: "󰍣"
+                        enabled: KdeConnectService.available && KdeConnectService.can.ping
+                        onClicked: KdeConnectService.ping(Tr.t("From the desk"))
+                    }
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("The phone's music")
+                reading: {
+                    if (MediaService.origin !== "phone")
+                        return Tr.t("Not playing on the phone")
+                    return MediaService.artist !== ""
+                        ? `${MediaService.title} · ${MediaService.artist}`
+                        : MediaService.title
+                }
+
+                ToggleSwitch {
+                    checked: SettingsService.phoneMedia
+                    onToggled: SettingsService.set("phoneMedia", !checked)
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("Shared clipboard")
+                reading: {
+                    if (!SettingsService.phoneClipboard)
+                        return Tr.t("Off — the two clipboards stay apart")
+                    return Tr.t("A copy on the phone lands here, and the button sends this desk's back")
+                }
+
+                ToggleSwitch {
+                    checked: SettingsService.phoneClipboard
+                    onToggled: SettingsService.set("phoneClipboard", !checked)
+                }
+            }
+        }
+    }
+
     // ── GALLERY HELPERS ─────────────────────────────────────────────────────
 
     property int shuffled: 0
 
     function skipFetching(): void {
-        UnsplashService.skip()
+        WallpaperFeed.skip()
     }
 
     function shuffleWallpaper(): void {
-        const waiting = UnsplashService.photos.filter(
-            photo => !UnsplashService.isFetched(photo.id))
-        const pool = waiting.length > 0 ? waiting : UnsplashService.photos
+        const waiting = WallpaperFeed.photos.filter(
+            photo => !WallpaperFeed.isFetched(photo.id))
+        const pool = waiting.length > 0 ? waiting : WallpaperFeed.photos
         if (pool.length === 0)
             return
         const photo = pool[Math.floor(Math.random() * pool.length)]
-        if (UnsplashService.isFetched(photo.id))
-            UnsplashService.applyFetched(photo)
+        if (WallpaperFeed.isFetched(photo.id))
+            WallpaperFeed.applyFetched(photo)
         else
-            UnsplashService.fetch(photo)
+            WallpaperFeed.fetch(photo)
     }
 }

@@ -31,7 +31,8 @@ Item {
         coding: codingFace,
         battery: batteryFace,
         stats: statsFace,
-        claude: claudeFace,
+        ai: aiFace,
+        phone: phoneFace,
         media: mediaFace,
         calendar: calendarFace,
         timer: timerFace,
@@ -56,7 +57,8 @@ Item {
     Component { id: codingFace;     CodingFace     { family: root.family; ink: root.ink } }
     Component { id: batteryFace;    BatteryFace    { family: root.family; ink: root.ink } }
     Component { id: statsFace;      StatsFace      { family: root.family; ink: root.ink } }
-    Component { id: claudeFace;     ClaudeFace     { family: root.family; ink: root.ink } }
+    Component { id: aiFace;         AiFace         { family: root.family; ink: root.ink } }
+    Component { id: phoneFace;      PhoneFace      { family: root.family; ink: root.ink } }
     Component { id: mediaFace;      MediaFace      { family: root.family; ink: root.ink } }
     Component { id: calendarFace;   CalendarFace   { family: root.family; ink: root.ink } }
     Component { id: timerFace;      TimerFace      { family: root.family; ink: root.ink } }

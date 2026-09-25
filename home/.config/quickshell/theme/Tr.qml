@@ -976,6 +976,91 @@ QtObject {
             "due today": "para hoy",
             "overdue": "atrasadas",
 
+            // ── INTEGRATIONS · ASSISTANT USAGE ────────────────────────────────
+            "Assistant usage": "Uso del asistente",
+            "Tokens for the current block and the last seven days, read from the transcripts on this machine.":
+                "Tokens del bloque actual y de los últimos siete días, leídos de las transcripciones de esta máquina.",
+            "Nothing is sent anywhere: the numbers are counted from the transcripts each assistant already writes on disk. A block runs five hours from its first message, so the countdown to the reset is exact. Without a quota the ring shows how long the block has been running and no percentage is claimed, since a percentage of what? Put your plan's limits below and the bar is measured against them, and the face turns red as the block runs out.":
+                "No se envía nada a ninguna parte: los números se cuentan a partir de las transcripciones que cada asistente ya escribe en disco. Un bloque dura cinco horas desde su primer mensaje, así que la cuenta atrás hasta el reinicio es exacta. Sin cuota, el anillo muestra cuánto lleva el bloque en marcha y no reclama ningún porcentaje, ¿un porcentaje de qué? Pon los límites de tu plan aquí abajo y la barra se mide contra ellos, y la cara se pone roja a medida que el bloque se agota.",
+            "Transcripts": "Transcripciones",
+            "Each assistant keeps its history in its own place, and the shell reads all the ones it knows. If yours lives somewhere else — a second machine's disk, an encrypted mount, a container — write the extra directories here, one per line, and they are read alongside the usual ones.":
+                "Cada asistente guarda su historial en su sitio, y el shell lee todos los que conoce. Si el tuyo vive en otro lugar —el disco de otra máquina, un montaje cifrado, un contenedor— escribe aquí los directorios de más, uno por línea, y se leen junto a los de siempre.",
+            "Where to read them, for a home directory that is not where the shell looks.":
+                "Dónde leerlas, para un directorio personal que no es donde el shell mira.",
+            "Extra directories": "Directorios extra",
+            "No transcripts found": "No hay transcripciones",
+            "every assistant found": "todos los asistentes encontrados",
+            "This block": "Este bloque",
+            "This week": "Esta semana",
+            "tokens": "tokens",
+            "tokens per block": "tokens por bloque",
+            "tokens a week": "tokens por semana",
+            "models": "modelos",
+            "in this block": "en este bloque",
+            "Quotas": "Cuotas",
+            "What to measure the block and the week against.":
+                "Con qué medir el bloque y la semana.",
+            "Block quota": "Cuota del bloque",
+            "Week quota": "Cuota de la semana",
+            "The limits your plan charges you are not written down anywhere the shell can read, so they are asked for here. Set them and the usage face fills against them, going amber at 60% and red at 90%. Leave one at zero and that bar falls back to the block's own clock rather than inventing a percentage.":
+                "Los límites que te cobra tu plan no están escritos en ningún sitio que el shell pueda leer, así que se piden aquí. Ponlos y la cara de uso se llena contra ellos, poniéndose ámbar al 60% y roja al 90%. Deja uno a cero y esa barra cae en el reloj del propio bloque en vez de inventarse un porcentaje.",
+            "no quota set — showing the block's time":
+                "sin cuota: se muestra el tiempo del bloque",
+            "Not set — the block's clock instead":
+                "Sin poner: el reloj del bloque en su lugar",
+            "of the week's quota": "de la cuota de la semana",
+            "Not set — the busiest week on record instead":
+                "Sin poner: la semana más ocupada de las registradas en su lugar",
+            "of the busiest week on record":
+                "de la semana más ocupada de las registradas",
+            "no transcripts found": "no hay transcripciones",
+            "From the desk": "Desde el escritorio",
+            "charging": "cargando",
+            "pi's logs": "los registros de pi",
+            "/mnt/work/agents, /srv/logs/codex": "/mnt/work/agents, /srv/logs/codex",
+            "~/.pi/agent/sessions": "~/.pi/agent/sessions",
+            // ── INTEGRATIONS · THE PHONE ────────────────────────────────────────
+            "Paired phone": "Teléfono emparejado",
+            "The phone on this network, and what it will do when asked.":
+                "El teléfono de esta red, y lo que hará cuando se le pida.",
+            "KDE Connect pairs over the local network and does not need a server or an account. The phone's charge takes the ring on the bar beside the laptop's own battery, and the module's buttons are the things this particular pairing offers — a phone that refuses to be rung is not shown a bell. Music played on the phone can take over the desk's player, so the keys and the bar control it as if it were local.":
+                "KDE Connect se empareja por la red local y no necesita servidor ni cuenta. La carga del teléfono ocupa el anillo de la barra junto a la batería del propio portátil, y los botones del módulo son lo que ofrece este emparejamiento en concreto: a un teléfono al que no se pueda llamar no se le enseña una campana. La música que suene en el teléfono puede tomar el reproductor del escritorio, así que las teclas y la barra la controlan como si fuera local.",
+            "The one that answers": "El que conteste",
+            "phone": "teléfono",
+            "tablet": "tableta",
+            "Phone": "Teléfono",
+            "KDE Connect is not running": "KDE Connect no está en marcha",
+            "No paired phone": "Ningún teléfono emparejado",
+            "Not paired": "Sin emparejar",
+            "That phone is not paired": "Ese teléfono no está emparejado",
+            "The phone is out of reach": "El teléfono no está al alcance",
+            "out of reach": "no está al alcance",
+            "not connected": "sin conexión",
+            "Find it": "Encontrarlo",
+            "Ping": "Ping",
+            "No battery report": "Sin informe de batería",
+            "Shared clipboard": "Portapapeles compartido",
+            "Off — the two clipboards stay apart":
+                "No: los dos porta papeleles se quedan separados",
+            "A copy on the phone lands here, and the button sends this desk's back":
+                "Lo que copies en el teléfono aparece aquí, y el botón envía el de este escritorio al revés",
+            "The phone's music": "La música del teléfono",
+            "Not playing on the phone": "No suena en el teléfono",
+            // ── INTEGRATIONS · THE GALLERY ──────────────────────────────────────
+            "Browse asks the source for pictures on the topic and fills the gallery below; pick one to fetch it into your wallpapers and apply it, and the palette follows the new picture. Two of the sources are free and need no account; Unsplash and Pexels search properly with a key from their developers' pages, which is kept on this machine. The width is what the panel is about to fill, so a source is never asked for a picture smaller than the screen.":
+                "Buscar pide a la fuente fotos del tema y llena la galería de abajo; elige una para descargarla a tus fondos y aplicarla, y la paleta sigue a la nueva foto. Dos de las fuentes son gratis y no necesitan cuenta; Unsplash y Pexels buscan bien con una clave de las páginas de sus desarrolladores, que se guarda en esta máquina. La anchura es la que el panel está a punto de llenar, así que nunca se le pide a una fuente una foto más pequeña que la pantalla.",
+            "Photographs from whichever source you name, at the width your screens are.":
+                "Fotos de la fuente que nombres, a la anchura de tus pantallas.",
+            "Width": "Anchura",
+            "Browse": "Explorar",
+            "Browse again for another set": "Explorar otro conjunto",
+            "No source yet": "Aún sin fuente",
+            "This source needs a key": "Esta fuente necesita una clave",
+            "From the source's developers' page":
+                "De la página de los desarrolladores de la fuente",
+            "Reaching the source…": "Contactando con la fuente…",
+            "The source did not answer": "La fuente no respondió",
+            "Nothing that size for that topic": "Nada de ese tamaño para ese tema",
             // ── GOOGLE CALENDAR ───────────────────────────────────────────
             "The script could not be run": "No se pudo ejecutar el script",
             "Add the client id and secret": "Añade el id y el secreto del cliente",

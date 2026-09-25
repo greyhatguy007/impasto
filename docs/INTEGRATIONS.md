@@ -129,6 +129,84 @@ the per-machine part of the settings.
 
 ---
 
+## Assistant usage — what the block and the week have cost
+
+A usage bar on the island and a face on the desk, counted from the transcripts
+the assistants already write on this machine. **Nothing is sent anywhere.**
+
+- **Settings → Integrations → Assistant usage** — the source (*Everything*,
+  or one assistant on its own), the two quotas, and any extra transcript
+  directories.
+- The **block** is five hours from an assistant's first message, so the
+  countdown to the reset is exact; the **week** is the rolling seven days.
+- Cache reads are reported but not counted: they re-send context the provider
+  has already seen.
+- Without a quota the ring shows how long the block has been running and
+  claims no percentage, since a percentage of what?
+
+### Where the numbers come from
+
+| Source | Read from | Plan's own figures |
+|---|---|---|
+| Claude Code | `~/.claude/projects` | Asked for in the settings |
+| pi | `~/.pi/agent/sessions` | Asked for in the settings |
+| OmniRoute | the pi logs, filtered to that provider | — |
+| Everything | the two above, added together | — |
+
+Transcripts only ever grow, so each file is read from its last offset and the
+hourly buckets are cached under `~/.local/state/quickshell/ai-usage.json`.
+A machine whose logs live somewhere else says so in **Extra directories**,
+one path per line.
+
+### Reasons the usage can show
+
+| Reason | Meaning |
+|---|---|
+| No transcripts found | The folder is not there — set an extra directory |
+| No usage found in … | The folder is there and empty; nothing has been used |
+| The script could not be run | The helper script could not start — see
+  [troubleshooting](#troubleshooting) |
+
+---
+
+## KDE Connect — the phone on this desk
+
+The paired phone as a second bar module, a desktop face, and — if you want it
+— a player and a clipboard for the whole desk. Pairing happens in
+**KDE Connect** itself; impasto only reads what the daemon already knows.
+
+- **Settings → Integrations → Paired phone** — which device (one phone on a
+  desk needs no choice: *The one that answers*), and the three optional
+  behaviours: the phone's music takes over the desk's player, a copy made on
+  the phone lands on the desk's clipboard, and a greeting on unlock.
+- The bar module only offers what **this** pairing answers to. A phone that
+  refuses to be rung is not shown a bell.
+- The face draws the phone's charge as a phone, not as a second battery.
+
+### What is stored, and where
+
+Nothing. The device list comes from the KDE Connect daemon over the session
+bus; impasto keeps no device data, and **the phone is named only where the
+shell already draws the module or the face**.
+
+### Reasons the phone can show
+
+| Reason | Meaning |
+|---|---|
+| KDE Connect is not running | The daemon is not on the session bus — start
+  KDE Connect, or the phone simply is not a shell feature right now |
+| No paired phone | The daemon is up and knows no device — pair one there |
+| That phone is not paired | A saved id the daemon no longer holds |
+| *name* · out of reach | Paired, and asleep: the daemon still holds it and
+  the phone is simply not answering |
+| No battery report | The phone reported no battery level |
+| The script could not be run | The helper script could not start — see
+  [troubleshooting](#troubleshooting) |
+
+---
+
+---
+
 ## Activity — GitHub, LeetCode, Codeforces, GitLab
 
 The activity wall (the `coding` module and its desktop faces) draws a rolling

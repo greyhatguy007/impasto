@@ -197,6 +197,24 @@ Singleton {
             }
         },
         Toggle {
+            // The phone is not a switch, so pressing it does the one thing
+            // every desk reaches for it for: it rings, the same as the phone's
+            // own button, which is the only way to find a phone that has gone
+            // quiet in a pocket. It is lit while the phone answers, and inert
+            // without one, since a ringing tile for a phone that is not there
+            // is a tile that fails.
+            key: "phone"; icon: KdeConnectService.reachable && KdeConnectService.charging
+                ? "󰚦" : "󰒐"
+            label: Tr.t("Phone")
+            detail: KdeConnectService.available
+                ? `${KdeConnectService.name}${KdeConnectService.hasBattery
+                    ? ` · ${KdeConnectService.battery}%` : ""}`
+                : KdeConnectService.statusNote
+            active: KdeConnectService.connected
+            available: KdeConnectService.available && KdeConnectService.can.ring
+            action: () => KdeConnectService.ring()
+        },
+        Toggle {
             key: "nightlight"; icon: SunsetService.icon; label: "Night light"
             detail: SunsetService.detail
             active: SunsetService.on

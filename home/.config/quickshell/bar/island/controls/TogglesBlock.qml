@@ -82,8 +82,14 @@ Item {
     Component.onCompleted: {
         SystemService.subscribe()
         NetworkService.refresh()
+        // The phone tile rings, which is a question the phone has to be asked;
+        // the block holding the tile is what keeps the asking alive.
+        KdeConnectService.subscribe()
     }
-    Component.onDestruction: SystemService.release()
+    Component.onDestruction: {
+        SystemService.release()
+        KdeConnectService.release()
+    }
 
     ListView {
         id: pager

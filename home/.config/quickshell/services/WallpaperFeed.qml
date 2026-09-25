@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
-// │   U N S P L A S H   S E R V I C E                                        │
-// │   wallpapers from unsplash and picsum · via scripts/unsplash.py          │
+// │   W A L L P A P E R   F E E D   S E R V I C E                            │
+// │   wallpapers from a source the settings name · via the shell's script    │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -14,12 +14,14 @@ import Quickshell
 import Quickshell.Io
 
 // The gallery behind Settings → Integrations → Wallpaper. One search asks
-// `scripts/unsplash.py`, which answers with Unsplash's own photos when an
-// access key is set and Picsum's curated ones when there is none — the
-// shell can't tell the difference, and neither has to sign in.
+// `scripts/wallpaper_feed.py`, which answers with the photographs of
+// whichever source the settings name — wallhaven, unsplash, pexels,
+// openverse or picsum — at the width they were asked for, so nothing lands
+// smaller than the panel it is about to fill. The shell can't tell the
+// sources apart, and only two of them need a key.
 //
 // Photos are downloaded with curl into the wallpaper directory under a
-// `Unsplash – <artist>` name, so they join the ordinary gallery and are
+// `<source> – <artist>` name, so they join the ordinary gallery and are
 // applied, themed from and restored like any local picture. The queue is
 // serial, so a click-happy desk cannot open thirty curls; skipping drops
 // everything not yet started.
@@ -33,9 +35,11 @@ Singleton {
 
     // Holding the service keeps its processes answerable but asks for
     // nothing: a search is the user's call (Browse or Shuffle), so merely
-    // opening the settings never spends the provider's patience.
+    // opening the settings never spends a source's patience.
     function subscribe(): void {
         root.watchers += 1
+        if (root.watchers === 1)
+            root.describe()
     }
 
     function release(): void {
@@ -44,12 +48,13 @@ Singleton {
 
     // ── STATE ───────────────────────────────────────────────────────────────
 
-    // True once the script has answered at all; its absence is the settings
-    // row's reading when nothing works.
-    property bool available: false
-    // "unsplash", "picsum" or "" — what the last search actually used.
+    // True once the script has answered a search.
+    property bool known: false
+    // The source the last search used, and the sources the machine can
+    // reach, as the script's `providers` answers.
     property string provider: ""
-    // "setup", "auth", "provider", "network" or "" — from the script.
+    property var sources: []
+    // "setup", "auth", "provider", "network", "input" or "" — from the script.
     property string reason: ""
     property bool busy: false
 
@@ -60,6 +65,46 @@ Singleton {
     // The id of the photo downloading right now, for the progress row.
     property string fetchingId: ""
     property int generation: 0
+
+    // What the source would need before it could be searched: the key, for
+    // the two that take one.
+    readonly property var current: {
+        const wanted = root.sources.find(
+            entry => entry.id === root.provider) ?? null
+        if (wanted)
+            return wanted
+        return root.sources.find(entry => entry.id === "wallhaven") ?? null
+    }
+
+    readonly property bool needsKey: root.current?.needsKey === true
+    readonly property bool keyPresent: (SettingsService.wallpaperKey ?? "").length > 0
+    readonly property bool ready: !root.needsKey || root.keyPresent
+
+    // ── SOURCES ─────────────────────────────────────────────────────────────
+
+    readonly property Process describeQuery: Process {
+        command: [Quickshell.shellPath("scripts/wallpaper_feed.py"), "providers"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let report = null
+                try {
+                    report = JSON.parse(text)
+                } catch (error) {
+                    console.warn("Cannot parse the wallpaper sources:", error)
+                    return
+                }
+                if (report.available !== true)
+                    return
+                root.sources = report.providers ?? []
+            }
+        }
+    }
+
+    function describe(): void {
+        if (root.watchers === 0)
+            return
+        root.describeQuery.running = true
+    }
 
     // ── SEARCH ──────────────────────────────────────────────────────────────
 
@@ -72,14 +117,14 @@ Singleton {
             return
         root.busy = true
         root.generation += 1
-        root.query.command = [Quickshell.shellPath("scripts/unsplash.py"),
+        root.query.command = [Quickshell.shellPath("scripts/wallpaper_feed.py"),
             "search", "24", `${variation}`]
         root.query.running = true
     }
 
     // A new batch. `after` is optional: a callback run once the search has
     // come back and the first fetch has been queued, so the browse flow is
-    // one click. `variation` pages the provider, so Shuffle hands back a
+    // one click. `variation` pages the source, so Shuffle hands back a
     // different set of the same topic.
     function refresh(after = null, variation = 0): void {
         if (after)
@@ -99,19 +144,50 @@ Singleton {
         return `${data}/wallpapers`
     }
 
-    // Names on disk: `Unsplash – <artist>.jpg`. A same-artist pair is
-    // disambiguated by the photo id, so nothing is overwritten.
+    // Names on disk: `<source> – <artist>.jpg`, or the photo's id when the
+    // source names nobody. A same-artist pair is disambiguated by the id, so
+    // nothing is overwritten.
     function nameOf(photo): string {
-        const artist = (photo.artist ?? "").replace(/[\\/:*?"<>|]/g, "").trim()
-        const base = artist !== "" ? `Unsplash – ${artist}` : "Unsplash"
-        return `${base} (${photo.id}).jpg`
+        const extension = photo.extension ?? "jpg"
+        const who = (photo.artist ?? "").trim()
+        const tag = who !== ""
+            ? who.replace(/[\/\\:*?"<>|]/g, "-").slice(0, 48)
+            : `${photo.id ?? "photo"}`
+        const label = root.provider !== "" ? root.provider : "wallpaper"
+        return `${label} – ${tag}.${extension}`
     }
 
-    function isFetched(id: string): bool {
-        return root.fetched.indexOf(id) >= 0
+    // ── QUEUE ───────────────────────────────────────────────────────────────
+
+    readonly property Process download: Process {
+        // Which download this process belongs to, and of what: a skip that
+        // lands after a new begin() must not clear the new one's state.
+        property int processId: 0
+        property string photoId: ""
+        property string path: ""
+
+        stdout: StdioCollector {
+            onStreamFinished: {}
+        }
+
+        onExited: exitCode => {
+            const stale = root.download.processId !== root.runningId
+            if (exitCode !== 0) {
+                // No half-downloaded picture is left to be applied or read
+                // into a palette.
+                if (!stale && root.download.path !== "")
+                    Quickshell.execDetached(["rm", "-f", root.download.path])
+            } else if (!stale && root.download.photoId !== "") {
+                root.remember(root.download.photoId)
+            }
+            if (!stale)
+                root.advance()
+        }
     }
 
     function fetch(photo): void {
+        if (root.fetched.indexOf(photo.id) >= 0)
+            return
         if (root.fetchingId !== "")
             root.queue.push(photo)
         else
@@ -154,29 +230,33 @@ Singleton {
         }
     }
 
+    // ── THE SCRIPT ──────────────────────────────────────────────────────────
+
     function parse(text: string): var {
         if (!text || text.trim() === "")
             return null
         try {
             return JSON.parse(text)
         } catch (error) {
-            console.warn("Cannot parse the unsplash report:", error)
+            console.warn("Cannot parse the wallpaper report:", error)
             return null
         }
     }
 
     readonly property Process query: Process {
         stdout: StdioCollector {
+            // Per stream, not per chunk: partial JSON doesn't parse.
             onStreamFinished: {
                 root.busy = false
                 const report = root.parse(text)
                 if (!report || report.available !== true) {
-                    root.available = false
+                    root.known = false
+                    root.photos = []
                     root.provider = ""
                     root.reason = report?.reason ?? "network"
                     return
                 }
-                root.available = true
+                root.known = true
                 root.reason = ""
                 root.provider = report.provider ?? ""
                 root.photos = report.photos ?? []
@@ -188,35 +268,9 @@ Singleton {
                 }
             }
         }
-
-        onExited: exitCode => {
-            root.busy = false
-        }
     }
 
-    readonly property Process download: Process {
-        // Which download this process belongs to, and of what: a skip that
-        // lands after a new begin() must not clear the new one's state.
-        property int processId: 0
-        property string photoId: ""
-        property string path: ""
-
-        stdout: StdioCollector {
-            onStreamFinished: {}
-        }
-
-        onExited: exitCode => {
-            const stale = root.download.processId !== root.runningId
-            if (exitCode !== 0) {
-                // No half-downloaded picture is left to be applied or read
-                // into a palette.
-                if (!stale && root.download.path !== "")
-                    Quickshell.execDetached(["rm", "-f", root.download.path])
-            } else if (!stale && root.download.photoId !== "") {
-                root.remember(root.download.photoId)
-            }
-            if (!stale)
-                root.advance()
-        }
+    function isFetched(id: string): bool {
+        return root.fetched.indexOf(id) >= 0
     }
 }

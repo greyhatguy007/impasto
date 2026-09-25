@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
-// │   C L A U D E   M O D U L E                                              │
-// │   claude code usage · current block and week                             │
+// │   A I   M O D U L E                                                      │
+// │   assistant usage · current block and week                               │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -15,8 +15,9 @@ import "../../services"
 import "../../components"
 
 // Token and message counts for the current five-hour block and the last seven
-// days, read from the local transcripts. A percentage is shown only when a
-// ceiling is set in the settings. The ring is time elapsed in the block.
+// days, read from the local transcripts of whichever assistant the settings
+// name. A percentage is shown only against a quota the settings set; the ring
+// is time elapsed in the block until then.
 Item {
     id: root
 
@@ -25,8 +26,8 @@ Item {
     implicitWidth: holder.implicitWidth
     implicitHeight: holder.implicitHeight
 
-    Component.onCompleted: ClaudeService.subscribe()
-    Component.onDestruction: ClaudeService.release()
+    Component.onCompleted: AiUsageService.subscribe()
+    Component.onDestruction: AiUsageService.release()
 
     Loader {
         id: holder
@@ -47,13 +48,13 @@ Item {
                 width: Theme.capsuleHeight
                 height: Theme.capsuleHeight
                 thickness: 2.5
-                progress: ClaudeService.gauge
+                progress: AiUsageService.gauge
                 trackColor: Theme.indicatorDim
-                fillColor: ClaudeService.tint
+                fillColor: AiUsageService.tone
 
                 Behavior on fillColor { ColorAnimation { duration: Theme.durationMedium } }
 
-                ClaudeMark {
+                AiMark {
                     anchors.centerIn: parent
                     width: Math.round(Theme.capsuleHeight * 0.53)
                     height: Math.round(Theme.capsuleHeight * 0.53)
@@ -81,13 +82,13 @@ Item {
                     Layout.preferredWidth: 44
                     Layout.preferredHeight: 44
                     thickness: 3
-                    progress: ClaudeService.gauge
+                    progress: AiUsageService.gauge
                     trackColor: Theme.indicatorDim
-                    fillColor: ClaudeService.tint
+                    fillColor: AiUsageService.tone
 
                     Behavior on fillColor { ColorAnimation { duration: Theme.durationMedium } }
 
-                    ClaudeMark {
+                    AiMark {
                         anchors.centerIn: parent
                         width: 24
                         height: 24
@@ -101,7 +102,10 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        text: "Claude Code"
+                        // The assistant the settings name, or every one found
+                        // on disk when they name none in particular.
+                        text: AiUsageService.label !== ""
+                            ? AiUsageService.label : "Assistants"
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeMedium
@@ -113,9 +117,9 @@ Item {
                         Layout.fillWidth: true
                         // A block runs five hours from its first message, so
                         // the reset time is exact.
-                        text: ClaudeService.available
-                            ? `Session ${ClaudeService.resetsIn}`
-                            : "No sessions on disk"
+                        text: AiUsageService.available
+                            ? `Session ${AiUsageService.resetsIn}`
+                            : "No transcripts on disk"
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall
@@ -132,17 +136,17 @@ Item {
                     model: [
                         {
                             label: "SESSION",
-                            tokens: ClaudeService.blockTokens,
-                            count: ClaudeService.blockMessages,
-                            fraction: ClaudeService.sessionFraction,
-                            measured: ClaudeService.sessionMeasured
+                            tokens: AiUsageService.blockTokens,
+                            count: AiUsageService.blockMessages,
+                            fraction: AiUsageService.sessionFraction,
+                            measured: AiUsageService.sessionMeasured
                         },
                         {
                             label: "WEEK",
-                            tokens: ClaudeService.weekTokens,
-                            count: ClaudeService.weekMessages,
-                            fraction: ClaudeService.weeklyFraction,
-                            measured: ClaudeService.weeklyMeasured
+                            tokens: AiUsageService.weekTokens,
+                            count: AiUsageService.weekMessages,
+                            fraction: AiUsageService.weeklyFraction,
+                            measured: AiUsageService.weeklyMeasured
                         }
                     ]
 
@@ -158,13 +162,13 @@ Item {
                         Figure {
                             Layout.fillWidth: true
                             label: column.modelData.label
-                            value: `${ClaudeService.compact(column.modelData.tokens)} tokens`
+                            value: `${AiUsageService.compact(column.modelData.tokens)} tokens`
                             // Messages as the note: they tell a long session
                             // apart from one large file.
-                            note: ClaudeService.messages(column.modelData.count)
+                            note: AiUsageService.messages(column.modelData.count)
                         }
 
-                        // Only with a configured ceiling.
+                        // Only against a quota the settings set.
                         RowLayout {
                             Layout.fillWidth: true
                             visible: column.modelData.measured
@@ -176,11 +180,11 @@ Item {
                                 implicitWidth: 40
                                 implicitHeight: 5
                                 progress: column.modelData.fraction
-                                fillColor: ClaudeService.tint
+                                fillColor: AiUsageService.tone
                             }
 
                             Text {
-                                text: ClaudeService.percent(column.modelData.fraction)
+                                text: AiUsageService.percent(column.modelData.fraction)
                                 font.family: Theme.fontMono
                                 font.pixelSize: Theme.fontSizeLabel
                                 color: Theme.textMuted

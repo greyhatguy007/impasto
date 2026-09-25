@@ -9,7 +9,7 @@ singleton Tr                 1.0 theme/Tr.qml
 singleton SettingsService    1.0 services/SettingsService.qml
 singleton ThemeService       1.0 services/ThemeService.qml
 singleton WallpaperService   1.0 services/WallpaperService.qml
-singleton UnsplashService    1.0 services/UnsplashService.qml
+singleton WallpaperFeed      1.0 services/WallpaperFeed.qml
 singleton LauncherService    1.0 services/LauncherService.qml
 singleton SystemService      1.0 services/SystemService.qml
 singleton HyprlandService    1.0 services/HyprlandService.qml
@@ -32,7 +32,8 @@ singleton TimerService       1.0 services/TimerService.qml
 singleton CavaService        1.0 services/CavaService.qml
 singleton CompositorService  1.0 services/CompositorService.qml
 singleton BluetoothService   1.0 services/BluetoothService.qml
-singleton ClaudeService      1.0 services/ClaudeService.qml
+singleton KdeConnectService  1.0 services/KdeConnectService.qml
+singleton AiUsageService     1.0 services/AiUsageService.qml
 singleton UpdatesService     1.0 services/UpdatesService.qml
 singleton PetService         1.0 services/PetService.qml
 singleton ModuleService      1.0 services/ModuleService.qml
@@ -71,7 +72,7 @@ ContributionGrid 1.0 components/ContributionGrid.qml
 Sparkline        1.0 components/Sparkline.qml
 Spectrum         1.0 components/Spectrum.qml
 NotchFillet      1.0 components/NotchFillet.qml
-ClaudeMark       1.0 components/ClaudeMark.qml
+AiMark           1.0 components/AiMark.qml
 PaletteBoard     1.0 components/PaletteBoard.qml
 PetFace          1.0 components/PetFace.qml
 PetFamily        1.0 components/PetFamily.qml
@@ -108,6 +109,7 @@ Deck             1.0 deck/Deck.qml
 DynamicIsland    1.0 bar/widgets/DynamicIsland.qml
 WorkspacesWidget 1.0 bar/widgets/WorkspacesWidget.qml
 BatteryWidget    1.0 bar/widgets/BatteryWidget.qml
+PhoneWidget      1.0 bar/widgets/PhoneWidget.qml
 BluetoothWidget  1.0 bar/widgets/BluetoothWidget.qml
 BarZone          1.0 bar/widgets/BarZone.qml
 BarChip          1.0 bar/widgets/BarChip.qml
@@ -130,7 +132,8 @@ Module           1.0 bar/modules/Module.qml
 ClockModule      1.0 bar/modules/ClockModule.qml
 MediaModule      1.0 bar/modules/MediaModule.qml
 TimerModule      1.0 bar/modules/TimerModule.qml
-ClaudeModule     1.0 bar/modules/ClaudeModule.qml
+AiModule         1.0 bar/modules/AiModule.qml
+PhoneModule      1.0 bar/modules/PhoneModule.qml
 BatteryModule    1.0 bar/modules/BatteryModule.qml
 VolumeModule     1.0 bar/modules/VolumeModule.qml
 BrightnessModule 1.0 bar/modules/BrightnessModule.qml

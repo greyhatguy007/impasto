@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────────╮
 // │                                                                          │
 // │   M E D I A   S E R V I C E                                              │
-// │   the player worth showing · mpris over d-bus                            │
+// │   the player worth showing · mpris over d-bus, or the phone              │
 // │                                                                          │
 // │   github.com/andreumassanet/impasto                                      │
 // │                                                                          │
@@ -15,8 +15,16 @@ import Quickshell.Services.Mpris
 
 import "."
 
-// Picks one MPRIS player and exposes it flatly: the one that is playing,
-// otherwise the first controllable one, so a paused track stays on the island.
+// Picks what the island plays and exposes it flatly, so nothing downstream
+// has to ask where it came from: the one local MPRIS player that is playing,
+// otherwise the first controllable one, so a paused track stays on screen;
+// and, when a paired phone is playing, the phone — a phone's music is a
+// deliberate act, so it outranks whatever the desk left running.
+//
+// The phone's player is adopted rather than polled: KDE Connect publishes it
+// on the session bus, and `KdeConnectService` hands it over here whenever it
+// changes. Its position is interpolated between those updates, because the
+// daemon only reports every few seconds while a track is running.
 Singleton {
     id: root
 
@@ -29,19 +37,87 @@ Singleton {
         return root.players.find(player => player.canControl) ?? null
     }
 
-    readonly property bool available: root.active !== null
-    readonly property bool playing: root.available && root.active.isPlaying
+    readonly property bool localAvailable: root.active !== null
 
-    readonly property string title: root.available ? (root.active.trackTitle ?? "") : ""
-    readonly property string artist: root.available ? (root.active.trackArtist ?? "") : ""
-    readonly property string album: root.available ? (root.active.trackAlbum ?? "") : ""
-    readonly property string artUrl: root.available ? (root.active.trackArtUrl ?? "") : ""
-    readonly property string identity: root.available ? (root.active.identity ?? "") : ""
+    // The one the shell asks: there is something to show, whether it is a
+    // player on this machine or the phone. `localAvailable` is the narrower
+    // question, and is what the keys act on.
+    readonly property bool available: root.phoneAvailable || root.localAvailable
+    readonly property bool playing: root.phonePlaying || (root.localAvailable && root.active.isPlaying)
 
-    readonly property bool canNext: root.available && root.active.canGoNext
-    readonly property bool canPrevious: root.available && root.active.canGoPrevious
-    readonly property bool canToggle: root.available && root.active.canTogglePlaying
-    readonly property bool canSeek: root.available && root.active.canSeek && root.length > 0
+    // "phone" while the phone is what is playing, "mpris" while a local
+    // player is, and "" when there is nothing to show.
+    readonly property string origin: root.phonePlaying
+        ? "phone"
+        : (root.localAvailable ? "mpris" : "")
+
+    // ── THE PHONE ───────────────────────────────────────────────────────────
+
+    // What the phone last reported, and when it reported it. Both are empty
+    // until `adopt` is called, which is only while the KDE Connect service
+    // is watching.
+    property var phone: null
+    property real phoneAt: 0
+
+    function adopt(source: string, track): void {
+        if (source !== "phone" || !track) {
+            root.phone = null
+            return
+        }
+        if (!track.title && !track.playing) {
+            root.phone = null
+            return
+        }
+        root.phone = track
+        root.phoneAt = new Date().getTime()
+    }
+
+    readonly property bool phoneAvailable: root.phone !== null
+    readonly property bool phonePlaying: root.phoneAvailable && root.phone.playing === true
+
+    // ── WHAT IS SHOWED ──────────────────────────────────────────────────────
+
+    readonly property string title: {
+        if (root.phonePlaying)
+            return root.phone.title ?? ""
+        return root.localAvailable ? (root.active.trackTitle ?? "") : ""
+    }
+
+    readonly property string artist: {
+        if (root.phonePlaying)
+            return root.phone.artist ?? ""
+        return root.localAvailable ? (root.active.trackArtist ?? "") : ""
+    }
+
+    readonly property string album: {
+        if (root.phonePlaying)
+            return root.phone.album ?? ""
+        return root.localAvailable ? (root.active.trackAlbum ?? "") : ""
+    }
+
+    readonly property string artUrl: {
+        if (root.phonePlaying)
+            return root.phone.art ?? ""
+        return root.localAvailable ? (root.active.trackArtUrl ?? "") : ""
+    }
+
+    // "phone:…" and "MPRIS identity" as one string, so a card can say where
+    // the music is coming from without asking a second question.
+    readonly property string identity: {
+        if (root.phonePlaying)
+            return "phone"
+        return root.localAvailable ? (root.active.identity ?? "") : ""
+    }
+
+    readonly property bool canNext: root.phonePlaying || (root.localAvailable && root.active.canGoNext)
+    readonly property bool canPrevious: root.phonePlaying || (root.localAvailable && root.active.canGoPrevious)
+    readonly property bool canToggle: root.phonePlaying || (root.localAvailable && root.active.canControl)
+
+    // The phone's player cannot be told where to go: KDE Connect's bus
+    // offers no seek, so a strip on the phone's track is drawn without one
+    // rather than pretending a drag would do something.
+    readonly property bool canSeek: !root.phonePlaying
+        && root.localAvailable && root.active.canSeek && root.length > 0
 
     // ── LENGTH AND POSITION ───────────────────────────────────────────────
     //
@@ -55,7 +131,9 @@ Singleton {
     // a seek or a metadata change, which would otherwise flicker the seek
     // strip and snap the countdown.
 
-    readonly property real rawLength: root.available ? (root.active.length ?? 0) : 0
+    readonly property real rawLength: root.phonePlaying
+        ? (root.phone.length ?? 0)
+        : (root.localAvailable ? (root.active.length ?? 0) : 0)
 
     // Seconds. Streams report no length, so `progress` stays at 0.
     property real length: 0
@@ -63,17 +141,26 @@ Singleton {
     onRawLengthChanged: {
         if (root.rawLength > 0)
             root.length = root.rawLength
-        else if (!root.available)
+        else if (!root.playing)
             root.length = 0
     }
 
     // The last position the player answered with, in seconds.
     property real lastPosition: 0
 
-    readonly property real position: root.available
-        ? Math.max(0, Math.min(root.lastPosition,
-                               root.length > 0 ? root.length : root.lastPosition))
-        : 0
+    readonly property real position: {
+        if (root.phonePlaying) {
+            // The phone is asked every few seconds; between answers the
+            // position walks on its own, which is what a seek strip needs.
+            const since = (new Date().getTime() - root.phoneAt) / 1000
+            const read = (root.phone.position ?? 0) + since
+            return root.length > 0 ? Math.max(0, Math.min(read, root.length)) : read
+        }
+        return root.localAvailable
+            ? Math.max(0, Math.min(root.lastPosition,
+                                   root.length > 0 ? root.length : root.lastPosition))
+            : 0
+    }
 
     readonly property bool seekable: root.length > 0
     readonly property real progress: root.seekable
@@ -84,7 +171,12 @@ Singleton {
     // after a good reading — a player mid-seek — is ignored, unless the
     // track has genuinely changed (the caller resets `lastPosition`).
     function refresh(): void {
-        if (!root.available) {
+        if (root.phonePlaying) {
+            // The phone is read from the bus, not asked; the next update
+            // arrives on its own, and the position walks until it does.
+            return
+        }
+        if (!root.localAvailable) {
             root.lastPosition = 0
             return
         }
@@ -104,7 +196,7 @@ Singleton {
     readonly property Timer positionTimer: Timer {
         interval: 1000
         repeat: true
-        running: root.watchers > 0 && root.available && root.seekable
+        running: root.watchers > 0 && (root.playing || root.seekable)
         onTriggered: root.refresh()
     }
 
@@ -125,7 +217,7 @@ Singleton {
 
         // A resume: the first reading is wanted at once, not a second later.
         function onIsPlayingChanged(): void {
-            if (root.available && root.active.isPlaying)
+            if (root.localAvailable && root.active.isPlaying)
                 root.refresh()
         }
 
@@ -147,17 +239,34 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1)
     }
 
+    // ── THE CONTROLS ────────────────────────────────────────────────────────
+    //
+    // Every key goes to whatever is playing, the phone or the desk, so a
+    // control on the island never moves music that is not on screen.
+
     function toggle(): void {
-        if (root.canToggle)
+        if (root.phonePlaying)
+            KdeConnectService.playPause()
+        else if (root.canToggle)
             root.active.togglePlaying()
     }
 
     function next(): void {
-        if (root.canNext)
+        if (root.phonePlaying)
+            KdeConnectService.nextTrack()
+        else if (root.canNext)
             root.active.next()
     }
 
-    // `fraction` of the track's length.
+    function previous(): void {
+        if (root.phonePlaying)
+            KdeConnectService.previousTrack()
+        else if (root.canPrevious)
+            root.active.previous()
+    }
+
+    // `fraction` of the track's length. A phone's track has no strip: its
+    // player cannot be dragged to a place it would then refuse to report.
     function seek(fraction: real): void {
         if (!root.canSeek)
             return
@@ -166,10 +275,5 @@ Singleton {
         root.active.position = target
         root.nudge.restart()
         root.nudgeLate.restart()
-    }
-
-    function previous(): void {
-        if (root.canPrevious)
-            root.active.previous()
     }
 }

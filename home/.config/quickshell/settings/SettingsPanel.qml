@@ -123,8 +123,10 @@ Item {
           blurb: Tr.t("The services the shell speaks to, and their keys."),
           tabs: [{ id: "tasks", label: Tr.t("Tasks") },
                  { id: "calendar", label: Tr.t("Calendar") },
-                 { id: "wallpaper", label: Tr.t("Wallpaper") }],
-          keywords: "integrations vikunja server api token key credential credentials sync tasks board self hosted remote account url google calendar gcal oauth client secret events agenda wallpaper unsplash picsum photo photos gallery shuffle browse artist topic access key wallpapers provider",
+                 { id: "wallpaper", label: Tr.t("Wallpaper") },
+                 { id: "usage", label: Tr.t("Assistant usage") },
+                 { id: "phone", label: Tr.t("Phone") }],
+          keywords: "integrations vikunja server api token key credential credentials sync tasks board self hosted remote account url google calendar gcal oauth client secret events agenda wallpaper unsplash picsum wallhaven pexels openverse photo photos gallery shuffle browse artist topic access key wallpapers provider width source assistant usage tokens block week quota transcripts claude pi opencode codex gemini amp crush cline phone kdeconnect pair paired ring ping clipboard battery charge music player",
           page: integrationsPage },
 
         { id: "system", category: "session", icon: "󰍛", label: Tr.t("System"),

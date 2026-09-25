@@ -36,7 +36,8 @@ Item {
         weather: weatherLarge,
         stats: statsLarge,
         media: mediaLarge,
-        claude: claudeLarge,
+        ai: aiLarge,
+        phone: phoneLarge,
         notes: notesLarge,
         tasks: tasksLarge,
         photo: photoLarge,
@@ -46,6 +47,83 @@ Item {
     Loader {
         anchors.fill: parent
         sourceComponent: root.components[root.moduleId] ?? null
+    }
+
+    Component {
+        id: phoneLarge
+
+        WidgetFace {
+
+            ink: root.ink
+            label: "Phone"
+            reading: KdeConnectService.available && KdeConnectService.hasBattery
+                ? `${KdeConnectService.battery}%`
+                : (KdeConnectService.available ? "—" : Tr.t("Not paired"))
+            note: KdeConnectService.available
+                ? `${KdeConnectService.name} · ${KdeConnectService.chargeNote}`
+                : KdeConnectService.statusNote
+            tint: KdeConnectService.available && KdeConnectService.hasBattery
+                ? KdeConnectService.tone : root.ink.muted
+
+            // The face holds the subscription for the phone's reading, since
+            // the script is only asked while something is showing the answer.
+            Component.onCompleted: KdeConnectService.subscribe()
+            Component.onDestruction: KdeConnectService.release()
+
+            // A phone is not a laptop battery: the ring is a phone's shape, so
+            // a desk with both does not read as one machine with two packs.
+            body: [
+                ClippingRectangle {
+                    id: phoneBody
+
+                    readonly property real side: Math.min(width, height)
+
+                    width: Math.min(parent.width / 2, parent.height)
+                    height: width
+                    radius: width * 0.14
+                    color: root.ink.raised
+                    border.width: 3
+                    border.color: KdeConnectService.hasBattery
+                        ? KdeConnectService.tone : root.ink.dim
+
+                    // The charge climbs the shape, the way it does on a phone.
+                    ClippingRectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        height: parent.height
+                            * (KdeConnectService.hasBattery
+                                ? KdeConnectService.charge : 0)
+                        color: root.ink.text
+                        opacity: 0.18
+
+                        Behavior on height {
+                            NumberAnimation { duration: Theme.durationSlow }
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: KdeConnectService.hasBattery
+                            ? `${KdeConnectService.battery}%` : "󰒐"
+                        font.family: KdeConnectService.hasBattery
+                            ? Theme.fontFamily : Theme.fontMono
+                        font.pixelSize: phoneBody.side * 0.22
+                        color: root.ink.text
+                    }
+
+                    // The notch, so the shape is unmistakably a phone.
+                    Rectangle {
+                        anchors.top: parent.top
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: phoneBody.side * 0.3
+                        height: phoneBody.side * 0.045
+                        radius: height
+                        color: root.ink.raised
+                    }
+                }
+            ]
+        }
     }
 
     // ── ON THE GRID ─────────────────────────────────────────────────────────
@@ -225,21 +303,21 @@ Item {
     }
 
     Component {
-        id: claudeLarge
+        id: aiLarge
 
         WidgetFace {
 
             ink: root.ink
-            label: "Claude"
-            reading: ClaudeService.available ? ClaudeService.compact(ClaudeService.blockTokens) : "—"
-            note: !ClaudeService.available ? "no usage found"
-                : `this block · ${ClaudeService.messages(ClaudeService.blockMessages)} · ${ClaudeService.resetsIn}`
+            label: AiUsageService.label !== "" ? AiUsageService.label : "Assistants"
+            reading: AiUsageService.available ? AiUsageService.compact(AiUsageService.blockTokens) : "—"
+            note: !AiUsageService.available ? "no usage found"
+                : `this block · ${AiUsageService.messages(AiUsageService.blockMessages)} · ${AiUsageService.resetsIn}`
 
-            ClaudeMark {
+            AiMark {
                 anchors.centerIn: parent
                 width: 34
                 height: 34
-                color: ClaudeService.tint
+                color: AiUsageService.tone
             }
 
             body: [
@@ -247,19 +325,19 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width
                     spacing: 16
-                    visible: ClaudeService.available
+                    visible: AiUsageService.available
 
-                    // The percentage comes from the account's response headers,
-                    // the same figure as the usage page. Without the account,
-                    // the bar shows the block's elapsed time instead.
+                    // The percentage is measured against the quota in the
+                    // settings; without one the bar is the block's own
+                    // elapsed time, and says so rather than guessing.
                     Column {
                         width: parent.width
                         spacing: 7
 
                         Text {
-                            text: ClaudeService.sessionMeasured
-                                ? `block · ${ClaudeService.percent(ClaudeService.sessionFraction)}`
-                                : "block · against the busiest on record"
+                            text: AiUsageService.sessionMeasured
+                                ? `block · ${AiUsageService.percent(AiUsageService.sessionFraction)}`
+                                : "block · elapsed, no quota set"
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeSmall
                             color: root.ink.muted
@@ -269,8 +347,8 @@ Item {
 
                             trackColor: root.ink.raised
                             width: parent.width
-                            progress: ClaudeService.gauge
-                            fillColor: ClaudeService.tint
+                            progress: AiUsageService.gauge
+                            fillColor: AiUsageService.tone
                         }
                     }
 
@@ -279,9 +357,9 @@ Item {
                         spacing: 7
 
                         Text {
-                            text: ClaudeService.weeklyMeasured
-                                ? `week · ${ClaudeService.percent(ClaudeService.weeklyFraction)}`
-                                : `week · ${ClaudeService.compact(ClaudeService.weekTokens)}`
+                            text: AiUsageService.weeklyMeasured
+                                ? `week · ${AiUsageService.percent(AiUsageService.weeklyFraction)}`
+                                : `week · ${AiUsageService.compact(AiUsageService.weekTokens)}`
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeSmall
                             color: root.ink.muted
@@ -291,17 +369,14 @@ Item {
 
                             trackColor: root.ink.raised
                             width: parent.width
-                            progress: ClaudeService.weeklyMeasured
-                                ? ClaudeService.weeklyFraction
-                                : (ClaudeService.peakWeekTokens > 0
-                                    ? ClaudeService.weekTokens / ClaudeService.peakWeekTokens : 0)
+                            progress: AiUsageService.weekBarFraction
                             fillColor: root.ink.accent
                         }
                     }
 
                     Text {
                         width: parent.width
-                        text: `busiest block · ${ClaudeService.compact(ClaudeService.peakBlockTokens)}`
+                        text: `busiest block · ${AiUsageService.compact(AiUsageService.peakBlockTokens)}`
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall

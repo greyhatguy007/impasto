@@ -29,7 +29,8 @@ Item {
         calendar: calendarModule,
         media: mediaModule,
         timer: timerModule,
-        claude: claudeModule,
+        ai: aiModule,
+        phone: phoneModule,
         battery: batteryModule,
         volume: volumeModule,
         brightness: brightnessModule,
@@ -61,7 +62,8 @@ Item {
     Component { id: calendarModule; CalendarModule {} }
     Component { id: mediaModule;   MediaModule { compact: root.compact } }
     Component { id: timerModule;   TimerModule { compact: root.compact } }
-    Component { id: claudeModule;  ClaudeModule { compact: root.compact } }
+    Component { id: aiModule;      AiModule     { compact: root.compact } }
+    Component { id: phoneModule;   PhoneModule  { compact: root.compact } }
     Component { id: batteryModule; BatteryModule { compact: root.compact } }
     Component { id: volumeModule;     VolumeModule { compact: root.compact } }
     Component { id: brightnessModule; BrightnessModule { compact: root.compact } }

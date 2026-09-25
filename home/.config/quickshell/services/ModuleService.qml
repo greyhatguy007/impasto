@@ -40,7 +40,8 @@ Singleton {
     readonly property var catalogue: [
         { id: "media",         name: "Media",         bar: true,  width: 380, height: 172 },
         { id: "timer",         name: "Timer",         bar: true,  width: 348, height: 116 },
-        { id: "claude",        name: "Claude",        bar: true,  width: 356, height: 150 },
+        { id: "ai",           name: "Assistant",     bar: true,  width: 356, height: 150 },
+        { id: "phone",        name: "Phone",         bar: true,  width: 356, height: 172 },
         { id: "battery",       name: "Battery",       bar: true,  width: 320, height: 132 },
         { id: "volume",        name: "Volume",        bar: true,  width: 340, height: 116 },
         { id: "brightness",    name: "Brightness",    bar: true,  width: 340, height: 100 },
@@ -130,6 +131,19 @@ Singleton {
                 UpdatesService.subscribe()
             else
                 UpdatesService.release()
+        } else if (id === "ai") {
+            // The transcript scan is a walk of every session file, so it must
+            // not happen for a piece that is not on screen.
+            if (on)
+                AiUsageService.subscribe()
+            else
+                AiUsageService.release()
+        } else if (id === "phone") {
+            // One process per desk, and only while something shows the phone.
+            if (on)
+                KdeConnectService.subscribe()
+            else
+                KdeConnectService.release()
         } else if (id === "lyrics") {
             // The chip's figure is the live line, and the line is found by
             // MPRIS position, which only polls while something holds a
@@ -163,8 +177,8 @@ Singleton {
     // Modules with a ring face: those whose reading fills from empty to full.
     // A state or a count (the network, the bell, the date, the pending
     // updates) has nothing to fill, so it keeps its symbol in either shape.
-    readonly property var ringed: ["media", "timer", "claude", "battery", "volume",
-        "brightness", "stats", "pet", "bluetooth"]
+    readonly property var ringed: ["media", "timer", "ai", "phone", "battery",
+        "volume", "brightness", "stats", "pet", "bluetooth"]
 
     // A piece's own shape when it has one, the bar's when it does not.
     function shapeOf(id: string, own: var): string {
@@ -179,7 +193,7 @@ Singleton {
     // ── GLYPH AND FIGURE ────────────────────────────────────────────────────
     //
     // One table for every place a module's symbol and figure appear (bar,
-    // glance, settings), in either chip shape. Claude and the pet draw their
+    // glance, settings), in either chip shape. The assistant and the pet draw their
     // own mark instead of a glyph (`ChipFace`).
     function glyphOf(id: string): string {
         switch (id) {
@@ -197,6 +211,10 @@ Singleton {
             return WeatherService.glyph || "󰖐"
         case "updates":
             return "󰏖"
+        case "phone":
+            // The phone's own glyph, not a battery: a desk with a laptop and a
+            // phone on it must not show the same twice.
+            return KdeConnectService.charging ? "󰚦" : "󰒐"
         case "notifications":
             return NotificationService.doNotDisturb ? "󰂛" : "󰂚"
         case "media":
@@ -244,10 +262,19 @@ Singleton {
                 : (MediaService.title || MediaService.identity || "")
         case "timer":
             return TimerService.running ? TimerService.display : "0:00"
-        case "claude":
-            if (ClaudeService.measured)
-                return `${Math.round(ClaudeService.sessionFraction * 100)}%`
-            return ClaudeService.blockTokens > 0 ? ClaudeService.compact(ClaudeService.blockTokens) : "0%"
+        case "ai":
+            if (AiUsageService.measured)
+                return `${Math.round(AiUsageService.sessionFraction * 100)}%`
+            return AiUsageService.blockTokens > 0
+                ? AiUsageService.compact(AiUsageService.blockTokens) : "0%"
+        case "phone":
+            // A phone that reports no charge names itself, so the chip is
+            // never a bare percentage that could belong to the laptop.
+            if (!KdeConnectService.available)
+                return KdeConnectService.statusNote
+            if (KdeConnectService.hasBattery)
+                return `${KdeConnectService.battery}%`
+            return KdeConnectService.name
         case "stats":
             return `${StatsService.cpu.toFixed(0)}%`
         case "pet":
@@ -306,8 +333,11 @@ Singleton {
             break
         case "timer":
             return TimerService.running ? TimerService.tint : Theme.text
-        case "claude":
-            return ClaudeService.measured ? ClaudeService.tint : Theme.indicator
+        case "ai":
+            return AiUsageService.tone
+        case "phone":
+            return KdeConnectService.available && KdeConnectService.hasBattery
+                ? KdeConnectService.tone : Theme.indicator
         }
         return Theme.text
     }
@@ -439,10 +469,14 @@ Singleton {
             // A line needs a track to be syncing: title, artist and length
             // are all the query asks the player for.
             return MediaService.available
-        case "claude":
+        case "ai":
             // Reading this constructs the lazy singleton, which runs its
             // first query; it turns true a moment later.
-            return ClaudeService.available
+            return AiUsageService.available
+        case "phone":
+            // A phone module earns its place only while a phone is
+            // answering; KDE Connect being installed is not that.
+            return KdeConnectService.available
         case "battery":
             return BatteryService.available
         case "volume":

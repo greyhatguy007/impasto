@@ -99,8 +99,19 @@ Singleton {
     readonly property alias windowShadow: config.windowShadow
     readonly property alias windowGlass: config.windowGlass
     readonly property alias wallpaperTransition: config.wallpaperTransition
-    readonly property alias unsplashQuery: config.unsplashQuery
-    readonly property alias unsplashKey: config.unsplashKey
+    readonly property alias wallpaperProvider: config.wallpaperProvider
+    readonly property alias wallpaperQuery: config.wallpaperQuery
+    readonly property alias wallpaperKey: config.wallpaperKey
+    readonly property alias wallpaperWidth: config.wallpaperWidth
+    readonly property alias aiProvider: config.aiProvider
+    readonly property alias aiBlockQuota: config.aiBlockQuota
+    readonly property alias aiWeekQuota: config.aiWeekQuota
+    readonly property alias aiLogs: config.aiLogs
+    readonly property alias aiPiLogs: config.aiPiLogs
+    readonly property alias kdeconnectDevice: config.kdeconnectDevice
+    readonly property alias phoneMedia: config.phoneMedia
+    readonly property alias phoneClipboard: config.phoneClipboard
+    readonly property alias phoneGreeting: config.phoneGreeting
     readonly property alias greeting: config.greeting
     readonly property alias fontFamily: config.fontFamily
     readonly property alias fontMono: config.fontMono
@@ -297,7 +308,9 @@ Singleton {
         "vikunjaUrl", "vikunjaToken", "vikunjaProject",
         "gcalClientId", "gcalClientSecret", "gcalCalendar",
         "doNotDisturb", "nightLight", "nightTemperature",
-        "unsplashQuery", "unsplashKey",
+        "wallpaperProvider", "wallpaperQuery", "wallpaperKey", "wallpaperWidth",
+        "aiProvider", "aiBlockQuota", "aiWeekQuota", "aiLogs", "aiPiLogs",
+        "kdeconnectDevice",
         "recorderAudio", "captureShape", "captureKind"
     ]
 
@@ -478,13 +491,44 @@ Singleton {
 
         // ── WALLPAPER PROVIDERS ──────────────────────────────────────
         //
-        // What the gallery in Settings → Integrations fetches. A topic is
-        // anything Unsplash's search takes ("fog", "brutalism", "coast");
-        // with no access key the gallery falls back to Picsum, which needs
-        // none, and the topic is only a seed for its random pick. The key
-        // lives with the machine, like every other credential.
-        property string unsplashQuery: "nature"
-        property string unsplashKey: ""
+        // What the gallery in Settings → Integrations fetches, and at what
+        // size: `wallpaperProvider` names the source (wallhaven, unsplash,
+        // pexels, openverse, picsum), `wallpaperQuery` is anything that
+        // source's search takes ("fog", "brutalism", "coast"), and the width
+        // is what a wallpaper is downloaded at rather than the thumbnail a
+        // source would serve. The key lives with the machine, like every
+        // other credential, and only the sources that need one read it.
+        property string wallpaperProvider: "wallhaven"
+        property string wallpaperQuery: "nature"
+        property string wallpaperKey: ""
+        property int wallpaperWidth: 2560
+
+        // The assistant whose transcripts the usage ring is measured from,
+        // and the ceilings it is measured against, in tokens: a quota of
+        // zero means the settings did not set one, and the ring falls back
+        // to the block's own elapsed time. The two paths are for machines
+        // that keep their transcripts somewhere else.
+        property string aiProvider: "all"
+        property int aiBlockQuota: 0
+        property int aiWeekQuota: 0
+        property string aiLogs: ""
+        property string aiPiLogs: ""
+
+        // The paired phone, by name or by the daemon's own id. Empty is the
+        // one the daemon offers first, which is the right answer on a desk
+        // with one phone on it.
+        property string kdeconnectDevice: ""
+
+        // The phone's music is what the desk is playing, and the phone greets
+        // the morning with its own face: both are things a machine with a
+        // phone on it may or may not want.
+        property bool phoneMedia: true
+        property bool phoneGreeting: false
+
+        // A copy on the phone lands on the desk's clipboard, and the desk's
+        // can be pushed to the phone. Off on a machine where the phone is
+        // shared with someone else and its clipboard is not yours to take.
+        property bool phoneClipboard: false
 
         // Row id from `ThemeService.greetings`; `random` is picked by `fa` on
         // each run.

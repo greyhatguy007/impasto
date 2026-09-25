@@ -51,7 +51,7 @@ is running sits either side of the time, and every module on the bar opens into
 the island rather than into a popup of its own.
 
 <p align="center">
-  <img src=".github/assets/island-details.jpg" alt="Module details in the island: the player, the battery, Claude Code's usage, the processor and memory, the volume, the Wi-Fi list, the weather, the pet, the month with task dots, the tasks, a countdown and the GitHub wall" width="100%">
+  <img src=".github/assets/island-details.jpg" alt="Module details in the island: the player, the battery, the phone, the assistant's usage, the processor and memory, the volume, the Wi-Fi list, the weather, the pet, the month with task dots, the tasks, a countdown and the GitHub wall" width="100%">
 </p>
 
 ## The bar
@@ -192,8 +192,19 @@ a *Coming up* list in the date module, and the desktop calendar scrolling
 through weeks with every event day one click away. Read-only, and the refresh
 token is kept on the machine that connected, never in the settings file.
 
-The full walkthrough — Google Cloud setup, token storage, every status
-message and their fixes — is in [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+**The phone can be on the bar too**: with KDE Connect paired, its charge gets
+a module and a face of its own, its music can take the desk's player, and a
+copy made on the phone can land on the desk's clipboard — each a switch, and
+each only offered if that pairing answers to it.
+
+**The assistants can be counted**: a bar module and a desktop face measure the
+current block and the last seven days, read from the transcripts on this
+machine. Nothing is sent anywhere, and the transcript directories are yours to
+name if they do not live where the shell looks.
+
+The full walkthrough — Google Cloud setup, token storage, transcript
+directories, every status message and their fixes — is in
+[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 
 ## Installation
 

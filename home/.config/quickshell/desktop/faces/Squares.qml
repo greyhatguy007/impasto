@@ -41,7 +41,8 @@ Item {
         weather: weatherSquare,
         coding: codingSquare,
         stats: statsSquare,
-        claude: claudeSquare,
+        ai: aiSquare,
+        phone: phoneSquare,
         timer: timerSquare,
         pet: petSquare,
         games: gamesSquare,
@@ -257,24 +258,54 @@ Item {
     }
 
     Component {
-        id: claudeSquare
+        id: aiSquare
 
         WidgetFace {
 
             ink: root.ink
-            label: "Claude"
-            reading: !ClaudeService.available ? "—"
-                : ClaudeService.sessionMeasured
-                ? ClaudeService.percent(ClaudeService.sessionFraction)
-                : ClaudeService.compact(ClaudeService.blockTokens)
-            note: !ClaudeService.available ? "no usage found"
-                : (ClaudeService.sessionMeasured ? "of this block" : "this block")
+            label: AiUsageService.label !== "" ? AiUsageService.label : "Assistants"
+            reading: !AiUsageService.available ? "—"
+                : AiUsageService.sessionMeasured
+                ? AiUsageService.percent(AiUsageService.sessionFraction)
+                : AiUsageService.compact(AiUsageService.blockTokens)
+            note: !AiUsageService.available ? "no usage found"
+                : (AiUsageService.sessionMeasured ? "of this block" : "this block")
 
-            ClaudeMark {
+            AiMark {
                 anchors.centerIn: parent
                 width: 32
                 height: 32
                 color: root.ink.text
+            }
+        }
+    }
+
+    Component {
+        id: phoneSquare
+
+        WidgetFace {
+
+            ink: root.ink
+            label: "Phone"
+            reading: KdeConnectService.available && KdeConnectService.hasBattery
+                ? `${KdeConnectService.battery}%` : "—"
+            note: KdeConnectService.available
+                ? KdeConnectService.name
+                : KdeConnectService.statusNote
+            tint: KdeConnectService.available && KdeConnectService.hasBattery
+                ? KdeConnectService.tone : root.ink.muted
+
+            // A phone with no charge reports a name, and an empty ring reads
+            // as a phone that is out of power rather than one that has
+            // nothing to say — so the ring is drawn, but inert.
+            RingIndicator {
+                anchors.fill: parent
+                thickness: 3
+                progress: KdeConnectService.hasBattery
+                    ? KdeConnectService.charge : 0
+                trackColor: root.ink.dim
+                fillColor: KdeConnectService.hasBattery
+                    ? KdeConnectService.tone : root.ink.dim
             }
         }
     }

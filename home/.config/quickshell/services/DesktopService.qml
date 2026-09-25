@@ -97,7 +97,8 @@ Singleton {
     readonly property var faces: ({
         modern: {
             media: ["2x2", "4x2", "4x4"],           timer: ["2x2", "4x2"],
-            claude: ["2x2", "4x2", "4x4"],          battery: ["2x2", "4x2"],
+            ai: ["2x2", "4x2", "4x4"],              phone: ["2x2", "4x2"],
+            battery: ["2x2", "4x2"],
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],
@@ -110,7 +111,8 @@ Singleton {
         },
         analogue: {
             media: ["2x2", "4x2", "4x4"],           timer: ["2x2", "4x2"],
-            claude: ["2x2", "4x2"],                 battery: ["2x2", "4x2"],
+            ai: ["2x2", "4x2"],                     phone: ["2x2", "4x2", "4x4"],
+            battery: ["2x2", "4x2"],
             volume: ["2x2", "4x2"],                 brightness: ["2x2", "4x2"],
             network: ["2x2", "4x2"],                bluetooth: ["2x2", "4x2"],
             weather: ["2x2", "4x2", "4x4", "8x2"],  stats: ["2x2", "4x2", "4x4"],

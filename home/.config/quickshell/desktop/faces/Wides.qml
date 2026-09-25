@@ -42,7 +42,7 @@ Item {
         weather: weatherWide,
         coding: codingWide,
         stats: statsWide,
-        claude: claudeWide,
+        ai: aiWide,
         timer: timerWide,
         pet: petWide,
         media: mediaWide,
@@ -239,27 +239,27 @@ Item {
     }
 
     Component {
-        id: claudeWide
+        id: aiWide
 
         WidgetFace {
 
             ink: root.ink
-            label: "Claude"
-            reading: !ClaudeService.available ? "—"
-                : ClaudeService.sessionMeasured
-                ? ClaudeService.percent(ClaudeService.sessionFraction)
-                : ClaudeService.compact(ClaudeService.blockTokens)
-            note: !ClaudeService.available ? "no usage found"
-                : ClaudeService.sessionMeasured
-                ? `of this block · ${ClaudeService.compact(ClaudeService.blockTokens)}`
-                : `this block · ${ClaudeService.messages(ClaudeService.blockMessages)}`
+            label: AiUsageService.label !== "" ? AiUsageService.label : "Assistants"
+            reading: !AiUsageService.available ? "—"
+                : AiUsageService.sessionMeasured
+                ? AiUsageService.percent(AiUsageService.sessionFraction)
+                : AiUsageService.compact(AiUsageService.blockTokens)
+            note: !AiUsageService.available ? "no usage found"
+                : AiUsageService.sessionMeasured
+                ? `of this block · ${AiUsageService.compact(AiUsageService.blockTokens)}`
+                : `this block · ${AiUsageService.messages(AiUsageService.blockMessages)}`
             extraShare: 0.42
 
-            ClaudeMark {
+            AiMark {
                 anchors.centerIn: parent
                 width: 32
                 height: 32
-                color: ClaudeService.tint
+                color: AiUsageService.tone
             }
 
             extra: [
@@ -267,19 +267,19 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width
                     spacing: 8
-                    visible: ClaudeService.available
+                    visible: AiUsageService.available
 
                     UsageBar {
 
                         trackColor: root.ink.raised
                         width: parent.width
-                        progress: ClaudeService.gauge
-                        fillColor: ClaudeService.tint
+                        progress: AiUsageService.gauge
+                        fillColor: AiUsageService.tone
                     }
 
                     Text {
                         width: parent.width
-                        text: ClaudeService.resetsIn
+                        text: AiUsageService.resetsIn
                         horizontalAlignment: Text.AlignRight
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
