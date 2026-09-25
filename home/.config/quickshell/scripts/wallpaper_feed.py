@@ -168,17 +168,52 @@ def wallhaven(key, topic, count, variation, width):
     for entry in results[:count]:
         if not isinstance(entry, dict):
             continue
-        extension = "png" if str(entry.get("path", "")).endswith(".png") else "jpg"
+        identifier = str(entry.get("id") or "")
         out.append(photo(
-            entry.get("id"),
+            identifier,
             entry.get("path"),
-            entry.get("thumb"),
-            entry.get("author") or entry.get("uploader") or "",
-            f"https://wallhaven.cc/w/{entry.get('id')}",
-            entry.get("shorturl") or entry.get("purity") or "",
-            extension,
+            wallhaven_thumb(entry, identifier),
+            wallhaven_author(entry),
+            f"https://wallhaven.cc/w/{identifier}",
+            entry.get("short_url") or entry.get("shorturl")
+                or entry.get("purity") or "",
+            "png" if str(entry.get("file_type", "")).endswith("png")
+                or str(entry.get("path", "")).endswith(".png") else "jpg",
         ))
     return out
+
+
+# The search answer carries its thumbnails as a block of three sizes, and an
+# unauthenticated one carries them at all. Older answers used a flat `thumb`,
+# so both are read; and an id alone is enough to name the small one, which is
+# what the gallery draws, so a tile is never blank just because the answer was
+# terse.
+def wallhaven_thumb(entry, identifier):
+    thumbs = entry.get("thumbs")
+    if isinstance(thumbs, dict):
+        for size in ("small", "large", "original"):
+            if thumbs.get(size):
+                return str(thumbs[size])
+    if entry.get("thumb"):
+        return str(entry["thumb"])
+    if not identifier:
+        return ""
+    return f"https://th.wallhaven.cc/small/{identifier[:2]}/{identifier}.jpg"
+
+
+# The photographer's name, under whichever key the answer used: the plain
+# field when an API key is set, the uploader's object when it is not. An
+# unnamed photo is named by its id, which is also what it lands as on disk.
+def wallhaven_author(entry):
+    for key in ("author", "uploader"):
+        value = entry.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if isinstance(value, dict):
+            for field in ("username", "name"):
+                if value.get(field):
+                    return str(value[field]).strip()
+    return ""
 
 
 def unsplash(key, topic, count, variation, width):

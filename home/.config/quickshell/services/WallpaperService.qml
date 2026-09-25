@@ -107,6 +107,54 @@ QtObject {
         }
     }
 
+    // ── DELETING A PICTURE ───────────────────────────────────────────────
+    //
+    // A wallpaper directory fills up with fetches, and a picture that has
+    // been looked at once is not worth keeping. The script holds the whole
+    // permission: it will only unlink a picture that is inside the wallpaper
+    // directory, and it says which check stopped it otherwise. A rescan is
+    // what makes the tile leave the strip.
+    //
+    // The applied wallpaper is not a special case: deleting it leaves the
+    // picture on screen and clears the record, so the desktop is never left
+    // pointing at a file that is gone.
+    property string removingPath: ""
+    property string reason: ""
+
+    function removeWallpaper(path: string): void {
+        if (path === "" || root.removingPath !== "")
+            return
+        root.removingPath = path
+        root.reason = ""
+        root.removeProcess.command = [root.script, "remove-wallpaper", path]
+        root.removeProcess.running = true
+    }
+
+    readonly property Process removeProcess: Process {
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const answer = root.parseJson(text)
+                if (answer && answer.removed === true) {
+                    if (answer.wasCurrent === true)
+                        root.currentWallpaper = ""
+                    root.scan()
+                } else {
+                    // The script says which check said no, and the footer
+                    // shows it: a picture that is still there, and why.
+                    root.reason = answer?.reason ?? "could not be deleted"
+                }
+                root.removingPath = ""
+            }
+        }
+        onExited: {
+            // The script always answers, so this only runs when it did not.
+            if (root.removingPath !== "") {
+                root.reason = "could not be deleted"
+                root.removingPath = ""
+            }
+        }
+    }
+
     function parseJson(text: string): var {
         if (!text || text.trim() === "")
             return null

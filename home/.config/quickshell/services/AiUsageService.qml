@@ -101,31 +101,161 @@ Singleton {
     property bool connected: false
     property string reason: ""
 
+    // ── THE SERVER'S OWN FIGURES ───────────────────────────────────────────
+    //
+    // Only a gateway can know what plan its traffic is on and when that
+    // plan's window rolls. OmniRoute will say at
+    // `/api/usage/om-usage?format=json` with the same key a model request
+    // uses. What comes back is the plan and the time its window resets — the
+    // provider's own clock, where ours is a guess.
+    //
+    // When it is there it is what the countdown says, and the tokens stay as
+    // the spend. When it is not, `gatewayNote` says which of the ways it was
+    // not, because "the server does not know" and "this key may not ask" are
+    // different things to go and fix.
+    property var gateway: null
+
+    // The server said something worth showing: a plan, a reset, or both.
+    readonly property bool gatewayKnows: {
+        const answer = root.gateway
+        if (!answer || answer.available !== true)
+            return false
+        return (answer.plan !== null && answer.plan !== undefined)
+            || !!answer.resetsAt
+    }
+
+    readonly property string plan: {
+        const name = root.gateway?.plan
+        if (name === null || name === undefined)
+            return ""
+        return String(name)
+    }
+
+    // "3 d 4 h", from the server's own reset time rather than from the block's
+    // clock, which is a guess about when a subscription's window rolls.
+    readonly property string gatewayResets: root.gatewayKnows
+        ? root.resetsFrom(root.gateway.resetsAt)
+        : ""
+
+    // A short line for the face, and the whole reason in one sentence. One
+    // function, so the face, the module and the settings pane all describe
+    // the same answer the same way.
+    readonly property string gatewayNote: root.gatewaySummary(root.gateway)
+
+    function gatewaySummary(report: var): string {
+        if (!report)
+            return ""
+        if (report.available === true) {
+            if (report.plan === null || report.plan === undefined)
+                return Tr.t("the server does not know your plan's window yet")
+            return `${Tr.t("on")} ${report.plan}`
+        }
+        switch (report.reason) {
+        case "forbidden":
+            return Tr.t("this key may not ask for usage")
+        case "unrouted":
+            return Tr.t("this server speaks only the model API")
+        case "auth":
+            return Tr.t("this server refused the key")
+        case "setup":
+            return Tr.t("no gateway configured")
+        case "server":
+            return Tr.t("the server answered badly")
+        default:
+            return Tr.t("the server could not be asked")
+        }
+    }
+
+    // What to do about it, for the settings pane: the reason alone is a
+    // dead end, and each of these has a different fix.
+    function gatewayAdvice(report: var): string {
+        switch (report?.reason) {
+        case "forbidden":
+            return Tr.t("in the gateway's API manager, allow the local usage command for this key")
+        case "unrouted":
+            return Tr.t("it answers models but not usage — nothing to change here")
+        case "auth":
+            return Tr.t("check the key and the endpoint, then ask again")
+        case "setup":
+            return Tr.t("set an endpoint and a key, or let pi's own provider entry name the gateway")
+        case "network":
+            return Tr.t("the endpoint did not answer — check the address and the network")
+        case "server":
+            return Tr.t("the endpoint answered badly — try again in a moment")
+        default:
+            return ""
+        }
+    }
+
+    // A reset time, in the shell's words, from whatever a server sent.
+    function resetsFrom(when): string {
+        if (!when)
+            return ""
+        const ms = Date.parse(when)
+        if (!isFinite(ms))
+            return ""
+        const left = ms - root.clock.date.getTime()
+        if (left <= 0)
+            return Tr.t("resets now")
+        const minutes = Math.max(1, Math.ceil(left / 60000))
+        const days = Math.floor(minutes / 1440)
+        const hours = Math.floor((minutes % 1440) / 60)
+        if (days > 0)
+            return `${Tr.t("resets in")} ${days} ${Tr.t("d")} ${hours} ${Tr.t("h")}`
+        if (hours > 0)
+            return `${Tr.t("resets in")} ${hours} ${Tr.t("h")} ${minutes % 60} ${Tr.t("min")}`
+        return `${Tr.t("resets in")} ${minutes} ${Tr.t("min")}`
+    }
+
+    // ── ASKING IT ON PURPOSE ───────────────────────────────────────────────
+    //
+    // The settings pane's button, so an endpoint or a key can be tried
+    // without waiting for a poll to notice. The answer lands in one line,
+    // and the same wording the face uses, so a fix found here is a fix
+    // there too.
+    property bool testing: false
+    readonly property bool gatewayFault: root.answer?.available !== true
+
+    property var answer: null
+    readonly property string answerNote: {
+        const report = root.answer
+        if (!report)
+            return ""
+        if (report.available === true) {
+            const plan = root.gatewaySummary(report)
+            const reset = root.resetsFrom(report.resetsAt)
+            const models = typeof report.models === "number" && report.models > 0
+                ? Tr.t("%1 models").arg(report.models) : ""
+            return [plan, reset, models].filter(part => part !== "").join(" · ")
+        }
+        const advice = root.gatewayAdvice(report)
+        return root.gatewaySummary(report) + (advice !== "" ? ` — ${advice}` : "")
+    }
+
     // ── THE RING ────────────────────────────────────────────────────────────
     //
-    // Filled against the limit in the settings. Without a limit the ring
-    // shows the block's elapsed time instead, and `measured` says so, so
-    // nothing draws a spent quota it never measured.
+    // Tokens, against the biggest this desk has itself seen: a block against
+    // the busiest block, a week against the busiest week. Nothing here is a
+    // limit — no number to type, nothing to fall out of step with a plan, and
+    // the ring means the same thing on every machine. With no history to
+    // measure against, the block's own elapsed time stands in, and `measured`
+    // says so, so nothing draws a comparison it never made.
 
     // Five hours is the shape of a session's block, whatever filled it.
     readonly property real blockSpan: 5 * 3600 * 1000
 
-    readonly property real blockLimit:
-        SettingsService.aiBlockQuota > 0 ? SettingsService.aiBlockQuota : 0
-    readonly property real weekLimit:
-        SettingsService.aiWeekQuota > 0 ? SettingsService.aiWeekQuota : 0
-
-    readonly property bool sessionMeasured: root.available && root.blockLimit > 0
-    readonly property bool weeklyMeasured: root.available && root.weekLimit > 0
-    readonly property bool measured: root.sessionMeasured || root.weeklyMeasured
-
-    // What the settings set as a fraction of the limit, 0–1.
-    readonly property real sessionFraction: root.sessionMeasured
-        ? Math.max(0, Math.min(1, root.blockTokens / root.blockLimit))
+    // This block against the busiest block the transcripts still hold.
+    readonly property real blockShare: root.peakBlockTokens > 0
+        ? Math.max(0, Math.min(1, root.blockTokens / root.peakBlockTokens))
         : 0
-    readonly property real weeklyFraction: root.weeklyMeasured
-        ? Math.max(0, Math.min(1, root.weekTokens / root.weekLimit))
+
+    // This week against the busiest week on record.
+    readonly property real weekShare: root.peakWeekTokens > 0
+        ? Math.max(0, Math.min(1, root.weekTokens / root.peakWeekTokens))
         : 0
+
+    readonly property bool measured: root.available
+        && (root.peakBlockTokens > 0 || root.peakWeekTokens > 0)
 
     // Without a limit the block still has a shape, and the time spent in it
     // is the honest stand-in for a spent one.
@@ -167,29 +297,24 @@ Singleton {
         return "resets now"
     }
 
-    // The ring to draw: the fuller of the block and the week, and the worst
-    // state across them, which is what the bar tints by.
+    // The ring to draw: the bigger of the two against this desk's own record.
+    // A block with nothing to compare it to is drawn as the time it has been
+    // running, which is the one honest thing left to draw.
     readonly property real gauge: root.measured
-        ? Math.max(root.sessionFraction, root.weeklyFraction)
+        ? Math.max(root.blockShare, root.weekShare)
         : root.elapsed
 
-    readonly property real worst: Math.max(
-        root.sessionMeasured ? root.sessionFraction : 0,
-        root.weeklyMeasured ? root.weeklyFraction : 0)
+    readonly property real worst: Math.max(root.blockShare, root.weekShare)
 
-    // A limit of zero means the settings did not set one, and the ring falls
-    // back to the block's own time rather than pretending to be measured.
-    readonly property real blockFraction: root.sessionMeasured
-        ? root.sessionFraction
+    // A block with history behind it is drawn against it; a first block falls
+    // back to its own clock.
+    readonly property real blockFraction: root.peakBlockTokens > 0
+        ? root.blockShare
         : root.elapsed
 
-    // The week's bar with no quota set is drawn against the best week the
-    // transcripts still hold, so it is a reading of this desk's own history
-    // rather than of a limit nobody wrote down.
-    readonly property real weekBarFraction: root.weeklyMeasured
-        ? root.weeklyFraction
-        : (root.peakWeekTokens > 0
-            ? Math.max(0, Math.min(1, root.weekTokens / root.peakWeekTokens)) : 0)
+    // The week's bar against the busiest week on record: a reading of this
+    // desk's own history rather than of a limit nobody wrote down.
+    readonly property real weekBarFraction: root.weekShare
 
     readonly property string state: {
         if (!root.available)
@@ -251,12 +376,51 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1)
     }
 
+    // The gateway to ask, when the settings name one. Nothing is passed when
+    // they do not, and the script falls back to pi's own provider entry rather
+    // than to a guess at one. The key rides on the command line and nowhere
+    // else: it is read, never stored here and never logged.
+    function gatewayArgs(): var {
+        if (SettingsService.omniEndpoint === "")
+            return []
+        const args = ["--endpoint", SettingsService.omniEndpoint.trim()]
+        if (SettingsService.omniApiKey !== "")
+            args.push("--key", SettingsService.omniApiKey.trim())
+        return args
+    }
+
     function refresh(): void {
-        root.query.command = [
+        const command = [
             Quickshell.shellPath("scripts/ai_usage.py"), "usage",
             SettingsService.aiProvider || "all",
-        ]
+        ].concat(root.gatewayArgs())
+        root.query.command = command
         root.query.running = true
+    }
+
+    // The settings pane's button: the same ask the poll makes, on demand.
+    function testGateway(): void {
+        root.answer = null
+        root.testing = true
+        const command = [
+            Quickshell.shellPath("scripts/ai_usage.py"), "gateway",
+        ].concat(root.gatewayArgs())
+        root.probe.command = command
+        root.probe.running = true
+    }
+
+    readonly property Process probe: Process {
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.testing = false
+                try {
+                    root.answer = JSON.parse(text)
+                } catch (error) {
+                    console.warn("Cannot parse the gateway answer:", error)
+                    root.answer = { available: false, reason: "server" }
+                }
+            }
+        }
     }
 
     readonly property Timer poller: Timer {
@@ -284,6 +448,7 @@ Singleton {
                     root.connected = report.connected === true
                     root.reason = report.reason ?? ""
                     root.models = []
+                    root.gateway = report.gateway ?? null
                     return
                 }
                 root.available = true
@@ -309,6 +474,7 @@ Singleton {
                 root.weekCacheWriteTokens = report.weekCacheWriteTokens
                 root.cost = report.cost
                 root.models = report.models ?? []
+                root.gateway = report.gateway ?? null
             }
         }
     }

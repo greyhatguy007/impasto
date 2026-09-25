@@ -14,27 +14,35 @@ import "../../../theme"
 import "../../../services"
 import "../../../components"
 
-// Assistant usage as a fuel gauge: F with the quota untouched, E when it is
-// spent, red at the empty end. The ring is measured against the limit in the
-// settings; with no limit set it shows the block's own elapsed time, which is
-// a guess, and the line says so rather than quoting a percentage of nothing.
+// Assistant usage as a fuel gauge: F with the window untouched, E when this
+// block is the biggest one on record, red when it is nearly the biggest. The
+// ring is tokens against the biggest this desk has itself seen — not against
+// a quota, which would be a number to keep true. With no history behind it the
+// ring is the block's own elapsed time, and the line says so rather than
+// quoting a share of nothing.
 Instrument {
     id: face
 
+    // The server's countdown when it has one, the block's own clock otherwise.
+    readonly property string resets: AiUsageService.gatewayResets !== ""
+        ? AiUsageService.gatewayResets
+        : AiUsageService.resetsIn
+
+    // Tokens, never a percentage: what this block cost to run.
     readonly property string figure: !AiUsageService.available ? "—"
-        : AiUsageService.sessionMeasured
-        ? AiUsageService.percent(AiUsageService.sessionFraction)
         : AiUsageService.compact(AiUsageService.blockTokens)
 
-    line: !AiUsageService.available ? "No usage found"
-        : (AiUsageService.sessionMeasured
-            ? `${face.figure} of the block`
-            : `${face.figure} this block`)
+    line: !AiUsageService.available ? "No transcripts found"
+        : `${face.figure} tokens this block`
     reading: face.figure
-    note: !AiUsageService.available ? "no usage found"
-        : AiUsageService.sessionMeasured
-        ? `of the block · ${AiUsageService.resetsIn}`
-        : `this block · ${AiUsageService.resetsIn}`
+
+    note: {
+        if (!AiUsageService.available)
+            return "no transcripts found"
+        const where = AiUsageService.plan !== "" ? `on ${AiUsageService.plan}` : ""
+        return [`${face.resets}`, where].filter(text => text !== "").join(" · ")
+    }
+
     filled: true
 
     Gauge {
@@ -69,9 +77,8 @@ Instrument {
             }
 
             Text {
-                text: AiUsageService.weeklyMeasured
-                    ? `${AiUsageService.percent(AiUsageService.weeklyFraction)} of the week`
-                    : "this week"
+                text: !AiUsageService.available ? "—"
+                    : `${AiUsageService.compact(AiUsageService.weekTokens)} this week`
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeLabel
                 color: face.ink.muted

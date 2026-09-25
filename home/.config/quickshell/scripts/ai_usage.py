@@ -23,7 +23,9 @@ it:
     claude      Claude Code's transcripts.
     pi          The pi agent's session logs — every provider it talks to.
     omniroute   The pi session logs filtered to the OmniRoute provider, and
-                a health probe of the gateway from pi's own models.json.
+                a read of the gateway itself: what plan it is on and when its
+                window resets, from the endpoint and key the settings hold, or
+                from pi's own models.json when they hold none.
     all         Every source above, added together.
 
 Cache reads are reported but not counted against a budget: they re-send
@@ -34,6 +36,7 @@ Commands:
 
     providers   what can be read on this machine
     usage       the block and the week for one provider, or the chosen one
+    gateway     the gateway's own plan and reset time, and why not
 
 Every command writes one JSON object to stdout; a failure is reported as
 `{"available": false, "reason": ...}` rather than a traceback, so the shell
@@ -77,27 +80,47 @@ def fail(reason, note="", connected=True):
 # ── SETTINGS ────────────────────────────────────────────────────────────────
 
 def settings():
-    """The provider, the token ceilings and the paths, from the shell."""
+    """The provider, the gateway and the paths, from the shell.
+
+    Read from the shell's own settings file, and overridable per run: the
+    settings pane asks the gateway what it says with a test button, and a
+    machine that keeps its state elsewhere can pass its own.
+    """
     path = STATE / "settings.json"
     try:
         with path.open() as handle:
             stored = json.load(handle)
     except (OSError, ValueError):
-        return {}, {}
+        stored = {}
+
+    def flag(name):
+        """A command-line override of a setting, by long name or short."""
+        for form in (f"--{name}", f"-{name[0]}"):
+            if form in sys.argv:
+                index = sys.argv.index(form)
+                return sys.argv[index + 1].strip() if index + 1 < len(sys.argv) else ""
+        return str(stored.get(name) or "").strip()
 
     chosen = str(stored.get("aiProvider") or "all").strip() or "all"
-    quotas = {
-        "blockTokens": int(stored.get("aiBlockQuota") or 0),
-        "weekTokens": int(stored.get("aiWeekQuota") or 0),
-    }
     # Anything not asked for is left at the provider's own idea of where
     # its logs are, so a machine with the logs somewhere else can say so.
     overrides = {}
     for key, name in (("aiLogs", "claude"), ("aiPiLogs", "pi")):
-        path = str(stored.get(key) or "").strip()
+        path = str(flag(key) or "").strip()
         if path:
             overrides[name] = Path(os.path.expanduser(path))
-    return {"provider": chosen, "quota": quotas}, overrides
+
+    server = None
+    endpoint = flag("endpoint")
+    if endpoint:
+        # What a settings pane types is a base URL; the quota route hangs off
+        # its root, so a `/v1` on the end is dropped for the ask and kept for
+        # the catalog.
+        base = endpoint.rstrip("/")
+        server = {"api": base, "root": base[:-3] if base.endswith("/v1") else base,
+                  "key": flag("key")}
+
+    return {"provider": chosen, "server": server}, overrides
 
 
 # ── THE CACHE ───────────────────────────────────────────────────────────────
@@ -315,41 +338,215 @@ class PiSessions(Provider):
 OMNI_PROVIDERS = ["omni", "omniroute"]
 
 
-def gateway():
-    """OmniRoute's own reachability, from pi's provider entry.
+def omni_server():
+    """pi's OmniRoute entry: the server it points at, and that server's key.
 
-    The gateway is OpenAI-compatible and speaks no usage API of its own, so
-    the tokens come from the session logs; this says whether the desk is
-    pointed at a gateway that answers, and how many models it offers.
+    Read, never written and never printed — the shell has no business storing
+    a gateway's key, and the transcript already says what the traffic cost.
     """
-    entry = {}
     try:
         models = json.loads((HOME / ".pi" / "agent" / "models.json").read_text())
         entry = (models.get("providers") or {}).get("omni") or {}
     except (OSError, ValueError, AttributeError):
-        return {"available": False, "reason": "setup", "models": 0}
-
+        return None
     base = str(entry.get("baseUrl") or "").strip().rstrip("/")
-    key = str(entry.get("apiKey") or "").strip()
     if not base:
-        return {"available": False, "reason": "setup", "models": 0}
+        return None
+    return {"api": base, "root": base[:-3] if base.endswith("/v1") else base,
+            "key": str(entry.get("apiKey") or "").strip()}
 
+
+def used_percent(quota):
+    """How much of a window is gone, out of the several ways it can say so.
+
+    The order is theirs: a percentage first, then used over total, then a bare
+    used, then what is left — a number that is 0–100 either way.
+    """
+    if not isinstance(quota, dict):
+        return None
+
+    def number(field):
+        value = quota.get(field)
+        if isinstance(value, bool) or value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def clamp(value):
+        return max(0.0, min(100.0, value))
+
+    for field, invert in (("usedPercentage", False), ("remainingPercentage", True)):
+        value = number(field)
+        if value is not None:
+            return clamp(100 - value if invert else value)
+    used, total = number("used"), number("total")
+    if used is not None and total is not None and total > 0:
+        return clamp(used / total * 100)
+    for field, invert in (("used", False), ("remaining", True)):
+        value = number(field)
+        if value is not None and 0 <= value <= 100:
+            return clamp(100 - value if invert else value)
+    return None
+
+
+def window_of(quotas, kind):
+    """One window out of a connection's quotas.
+
+    Their keys are the provider's own words for it, so a session window is
+    anything that says session or 5h, a weekly one anything that says weekly
+    or 7d. A series named for one model on top of a week (a weekly Sonnet
+    window, say) is that model's own, not the plan's, and is left alone.
+    """
+    if not isinstance(quotas, dict):
+        return None
+    for key, value in quotas.items():
+        if not isinstance(value, dict):
+            continue
+        name = "".join(char if char.isalnum() else " " for char in key.lower()).strip()
+        if kind == "block" and ("session" in name or "5h" in name):
+            return {"window": key, "usedPercent": used_percent(value),
+                    "resetAt": value.get("resetAt") or None}
+        if kind == "week" and "sonnet" not in name and (
+                "weekly" in name or "7d" in name):
+            return {"window": key, "usedPercent": used_percent(value),
+                    "resetAt": value.get("resetAt") or None}
+    return None
+
+
+def personal_limits(status):
+    """The key's own money limits, when it has any."""
+    if not isinstance(status, dict) or not status.get("enabled"):
+        return None
+    out = {}
+    for kind, spent, limit, reset in (
+            ("day", "dailySpentUsd", "dailyLimitUsd", "dailyResetAtIso"),
+            ("week", "weeklySpentUsd", "weeklyLimitUsd", "weeklyResetAtIso")):
+        if status.get(limit) is None:
+            continue
+        out[kind] = {"spent": status.get(spent), "limit": status.get(limit),
+                     "resetAt": status.get(reset) or None}
+    return out or None
+
+
+def gateway_quota(server):
+    """The plan's own figures, from the server itself.
+
+    `GET /api/usage/om-usage?format=json` is the route OmniRoute built for
+    exactly this: the same bearer key a model request uses, the same
+    `allowed:false` refusal a client can tell apart from an empty answer, and
+    the per-connection quota windows the dashboard draws. Text by default,
+    JSON when asked — one request either way.
+
+    A server that does not route it is not broken, and says so with a reason
+    of its own rather than a network error: a 404 here means the deployment
+    speaks only the client API.
+    """
     request = urllib.request.Request(
-        f"{base}/models",
-        headers={"Authorization": f"Bearer {key or 'omniroute-public'}",
+        f"{server['root']}/api/usage/om-usage?format=json",
+        headers={"Authorization": f"Bearer {server['key'] or 'omniroute-public'}",
                  "User-Agent": "impasto"},
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
-            answer = json.loads(response.read() or b"{}")
-        models = answer.get("data") if isinstance(answer, dict) else None
-        return {"available": True, "models": len(models) if isinstance(models, list) else 0}
+            body = response.read()
+    except urllib.error.HTTPError as error:
+        # Their refusals are structured, and the two codes mean different
+        # things: 401 is a key the server does not know, 403 is a key it knows
+        # but has not been allowed to ask. So the message is worth reading.
+        note = ""
+        try:
+            refusal = json.loads(error.read() or b"{}")
+            note = str((refusal.get("error") or {}).get("message") or "")
+        except (ValueError, TypeError, AttributeError, OSError):
+            pass
+        if error.code == 404:
+            return {"available": False, "reason": "unrouted"}
+        if error.code == 401:
+            return {"available": False, "reason": "auth", "note": note}
+        if error.code == 403:
+            return {"available": False, "reason": "forbidden", "note": note}
+        return {"available": False, "reason": "server", "code": error.code}
+    except (urllib.error.URLError, ValueError, OSError) as error:
+        return {"available": False, "reason": "network", "note": str(error)}
+
+    try:
+        answer = json.loads(body)
+    except (ValueError, TypeError):
+        # An empty body is a server that does not route this at all.
+        return {"available": False, "reason": "unrouted"}
+    if not isinstance(answer, dict):
+        return {"available": False, "reason": "unrouted"}
+    if answer.get("allowed") is not True:
+        # Their own words for a refusal, so the note can quote them.
+        return {"available": False, "reason": "forbidden",
+                "note": str((answer.get("error") or {}).get("message") or "")}
+
+    snapshots = [snapshot for snapshot in (answer.get("providers") or [])
+                 if isinstance(snapshot, dict)]
+    chosen = answer.get("provider")
+    if not isinstance(chosen, dict) and snapshots:
+        chosen = snapshots[0]
+    out = {"available": True, "personal": personal_limits(answer.get("personal")),
+           "providers": []}
+    for snapshot in snapshots:
+        out["providers"].append({
+            "provider": str(snapshot.get("provider") or ""),
+            "plan": snapshot.get("plan"),
+            "block": window_of(snapshot.get("quotas"), "block"),
+            "week": window_of(snapshot.get("quotas"), "week"),
+        })
+    if isinstance(chosen, dict):
+        out["provider"] = str(chosen.get("provider") or "")
+        out["plan"] = chosen.get("plan")
+        out["block"] = window_of(chosen.get("quotas"), "block")
+        out["week"] = window_of(chosen.get("quotas"), "week")
+    return out
+
+
+def gateway(server=None):
+    """What the gateway itself can say.
+
+    Two questions, asked in that order. The quota route is the one worth the
+    request, and a server that answers it needs no second proof of life, so
+    `/v1/models` is only fetched to say the server is there at all when the
+    quota route is not routed — which is what a client-API-only deployment is.
+
+    The server to ask comes from the settings; with none, pi's own provider
+    entry is the answer, since a gateway on this desk is pi's by definition.
+    """
+    server = server or omni_server()
+    if not server:
+        return {"available": False, "reason": "setup", "models": 0}
+
+    answer = gateway_quota(server)
+    if answer.get("available"):
+        return answer
+
+    request = urllib.request.Request(
+        f"{server['api']}/models",
+        headers={"Authorization": f"Bearer {server['key'] or 'omniroute-public'}",
+                 "User-Agent": "impasto"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            catalog = json.loads(response.read() or b"{}")
+        rows = catalog.get("data") if isinstance(catalog, dict) else None
+        answer["models"] = len(rows) if isinstance(rows, list) else 0
     except urllib.error.HTTPError as error:
         reason = "auth" if error.code in (401, 403) else "network"
-        return {"available": False, "reason": reason, "models": 0}
+        if answer.get("reason") == "unrouted":
+            answer = {"available": False, "reason": reason, "models": 0}
+        else:
+            answer["models"] = 0
     except (urllib.error.URLError, ValueError, OSError) as error:
-        return {"available": False, "reason": "network", "note": str(error),
-                "models": 0}
+        if answer.get("reason") == "unrouted":
+            answer = {"available": False, "reason": "network", "models": 0,
+                      "note": str(error)}
+        else:
+            answer["models"] = 0
+    return answer
 
 
 # ── THE REGISTRY ────────────────────────────────────────────────────────────
@@ -432,7 +629,7 @@ def windows(hours):
     }
 
 
-def usage(identifier, overrides, quota):
+def usage(identifier, overrides, server):
     """One provider's numbers, in the shell's shape."""
     source = source_for(identifier, overrides)
     if source is None:
@@ -510,10 +707,9 @@ def usage(identifier, overrides, quota):
         "weekCacheReadTokens": week[3],
         "cost": round(sum(model["cost"] for model in week_models), 4),
         "models": week_models,
-        "quota": quota,
     }
     if source.get("gateway"):
-        answer["gateway"] = gateway()
+        answer["gateway"] = gateway(server)
     return answer
 
 
@@ -543,14 +739,16 @@ def describe(overrides):
 def main():
     command = sys.argv[1] if len(sys.argv) > 1 else "usage"
     chosen, overrides = settings()
-    quota = chosen.get("quota", {"blockTokens": 0, "weekTokens": 0})
 
     if command == "providers":
         print(json.dumps(describe(overrides)))
         return
+    if command == "gateway":
+        print(json.dumps(gateway(chosen.get("server"))))
+        return
     if command == "usage":
         wanted = sys.argv[2] if sys.argv[2:3] and sys.argv[2] else chosen["provider"]
-        print(json.dumps(usage(wanted, overrides, quota)))
+        print(json.dumps(usage(wanted, overrides, chosen.get("server"))))
         return
 
     fail("input", f"unknown command: {command}", connected=False)

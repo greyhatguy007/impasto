@@ -104,8 +104,8 @@ Singleton {
     readonly property alias wallpaperKey: config.wallpaperKey
     readonly property alias wallpaperWidth: config.wallpaperWidth
     readonly property alias aiProvider: config.aiProvider
-    readonly property alias aiBlockQuota: config.aiBlockQuota
-    readonly property alias aiWeekQuota: config.aiWeekQuota
+    readonly property alias omniEndpoint: config.omniEndpoint
+    readonly property alias omniApiKey: config.omniApiKey
     readonly property alias aiLogs: config.aiLogs
     readonly property alias aiPiLogs: config.aiPiLogs
     readonly property alias kdeconnectDevice: config.kdeconnectDevice
@@ -309,7 +309,7 @@ Singleton {
         "gcalClientId", "gcalClientSecret", "gcalCalendar",
         "doNotDisturb", "nightLight", "nightTemperature",
         "wallpaperProvider", "wallpaperQuery", "wallpaperKey", "wallpaperWidth",
-        "aiProvider", "aiBlockQuota", "aiWeekQuota", "aiLogs", "aiPiLogs",
+        "aiProvider", "omniEndpoint", "omniApiKey", "aiLogs", "aiPiLogs",
         "kdeconnectDevice",
         "recorderAudio", "captureShape", "captureKind"
     ]
@@ -503,14 +503,16 @@ Singleton {
         property string wallpaperKey: ""
         property int wallpaperWidth: 2560
 
-        // The assistant whose transcripts the usage ring is measured from,
-        // and the ceilings it is measured against, in tokens: a quota of
-        // zero means the settings did not set one, and the ring falls back
-        // to the block's own elapsed time. The two paths are for machines
-        // that keep their transcripts somewhere else.
+        // The assistant whose transcripts the usage figures are counted from.
+        // The two paths are for machines that keep their transcripts
+        // somewhere else.
         property string aiProvider: "all"
-        property int aiBlockQuota: 0
-        property int aiWeekQuota: 0
+        // An OmniRoute gateway, if pi is pointed at one and the shell should
+        // ask it rather than pi: its own endpoint, and the key that endpoint
+        // issued. Both empty means "let pi's own provider entry say", which
+        // is the answer on a desk where the gateway is only ever pi's.
+        property string omniEndpoint: ""
+        property string omniApiKey: ""
         property string aiLogs: ""
         property string aiPiLogs: ""
 

@@ -15,10 +15,11 @@ import "../../services"
 import "../../components"
 import "../widgets"
 
-// The phone as a control surface, in the same hand as the Bluetooth module:
-// the charge ring, the phone's name, and only the actions KDE Connect says
-// this pairing offers. A phone that cannot be rung — a tablet, or a pairing
-// without the plugin — is not shown a ringing bell it will ignore.
+// The phone as a control surface, in the same hand as the battery module: the
+// charge ring beside the charge, the phone's state and kind as the figures
+// below, and only the actions KDE Connect says this pairing offers. A phone
+// that cannot be rung — a tablet, or a pairing without the plugin — is not
+// shown a ringing bell it will ignore.
 Item {
     id: root
 
@@ -59,6 +60,11 @@ Item {
             anchors.bottomMargin: 12
             spacing: 12
 
+            // The charge ring and the number, in the battery module's exact
+            // hand: the ring, then the charge as a headline figure with the
+            // state under it. The phone's own name goes in the figures below
+            // rather than above, so a desk with a laptop and a phone on it
+            // reads the two charge lines the same way.
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 13
@@ -75,36 +81,63 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
+                        text: KdeConnectService.reachable
+                                && KdeConnectService.hasBattery
+                            ? `${KdeConnectService.battery}%`
+                            : KdeConnectService.reachable
+                                ? (KdeConnectService.type === "tablet"
+                                    ? Tr.t("tablet") : Tr.t("phone"))
+                                : "—"
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeMedium
+                        font.weight: Font.DemiBold
+                        color: KdeConnectService.reachable
+                            && KdeConnectService.hasBattery
+                            ? KdeConnectService.tone : Theme.text
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
                         // The name, or the reason there is none: one line that
                         // is always about the phone this desk is paired to.
                         text: KdeConnectService.statusNote
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeMedium
-                        font.weight: Font.DemiBold
-                        color: Theme.text
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: {
-                            if (!KdeConnectService.reachable)
-                                return KdeConnectService.available
-                                    ? Tr.t("out of reach") : Tr.t("not connected")
-                            if (KdeConnectService.hasBattery)
-                                return `${KdeConnectService.battery}%`
-                                    + (KdeConnectService.charging
-                                        ? ` · ${Tr.t("charging")}` : "")
-                            return KdeConnectService.type === "tablet"
-                                ? Tr.t("tablet") : Tr.t("phone")
-                        }
-                        elide: Text.ElideRight
-                        font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall
-                        color: KdeConnectService.reachable
-                            && KdeConnectService.hasBattery
-                            ? KdeConnectService.tone : Theme.textMuted
+                        color: Theme.textMuted
                     }
+                }
+            }
+
+            // What the phone is, and what it is doing — the two figures the
+            // battery module shows for a cell, asked of a phone instead.
+            RowLayout {
+                Layout.fillWidth: true
+                visible: KdeConnectService.available
+                spacing: 14
+
+                Figure {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    label: "STATE"
+                    value: !KdeConnectService.reachable ? Tr.t("asleep")
+                        : KdeConnectService.charging ? Tr.t("charging")
+                        : KdeConnectService.low ? Tr.t("low")
+                        : Tr.t("idle")
+                    note: KdeConnectService.charging
+                        ? Tr.t("going in") : Tr.t("coming out")
+                    valueColor: KdeConnectService.reachable
+                        ? KdeConnectService.tone : Theme.textMuted
+                }
+
+                Figure {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    label: Tr.t("Phone")
+                    value: KdeConnectService.type === "tablet"
+                        ? Tr.t("tablet") : Tr.t("phone")
+                    note: KdeConnectService.hasBattery
+                        ? Tr.t("battery reported") : Tr.t("no battery report")
                 }
             }
 

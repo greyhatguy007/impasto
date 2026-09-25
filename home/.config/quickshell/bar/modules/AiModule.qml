@@ -14,10 +14,12 @@ import "../../theme"
 import "../../services"
 import "../../components"
 
-// Token and message counts for the current five-hour block and the last seven
-// days, read from the local transcripts of whichever assistant the settings
-// name. A percentage is shown only against a quota the settings set; the ring
-// is time elapsed in the block until then.
+// What the assistant has been used for: the tokens in the current five-hour
+// block and the tokens in the last seven days, read from the local transcripts
+// of whichever assistant the settings name. No quota is asked for and no
+// percentage is claimed — the ring and the bars are each window against the
+// biggest this desk has itself seen, which is a reading of the same
+// transcripts rather than a limit somebody has to keep true.
 Item {
     id: root
 
@@ -35,7 +37,8 @@ Item {
         sourceComponent: root.compact ? chip : detail
     }
 
-    // Ring face: the block's clock. `ChipFace` draws the figure.
+    // Ring face: the block against the busiest block on record, or its own
+    // clock when there is no history yet. `ChipFace` draws the figure.
     Component {
         id: chip
 
@@ -102,10 +105,11 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        // The assistant the settings name, or every one found
-                        // on disk when they name none in particular.
-                        text: AiUsageService.label !== ""
-                            ? AiUsageService.label : "Assistants"
+                        // The tokens themselves, in the same size and weight
+                        // the battery module gives its charge.
+                        text: AiUsageService.available
+                            ? `${AiUsageService.compact(AiUsageService.blockTokens)} tokens`
+                            : "—"
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeMedium
@@ -115,11 +119,19 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        // A block runs five hours from its first message, so
-                        // the reset time is exact.
-                        text: AiUsageService.available
-                            ? `Session ${AiUsageService.resetsIn}`
-                            : "No transcripts on disk"
+                        // Which window this is, and when it rolls: the
+                        // gateway's own reset time when it will say, the
+                        // block's clock otherwise.
+                        text: {
+                            if (!AiUsageService.available)
+                                return "No transcripts on disk"
+                            const window = Tr.t("this block")
+                            return AiUsageService.gatewayResets !== ""
+                                ? `${window} · ${AiUsageService.gatewayResets}`
+                                : AiUsageService.resetsIn !== ""
+                                ? `${window} · ${AiUsageService.resetsIn}`
+                                : window
+                        }
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall
@@ -128,6 +140,10 @@ Item {
                 }
             }
 
+            // One figure per window, in the battery module's hand: a caption,
+            // the number, and what it is a count of. The bar under each is
+            // that window against the biggest one on record, so a bar with
+            // any height means this desk has seen a bigger one.
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 14
@@ -135,18 +151,20 @@ Item {
                 Repeater {
                     model: [
                         {
-                            label: "SESSION",
+                            label: "BLOCK",
                             tokens: AiUsageService.blockTokens,
                             count: AiUsageService.blockMessages,
-                            fraction: AiUsageService.sessionFraction,
-                            measured: AiUsageService.sessionMeasured
+                            share: AiUsageService.blockShare,
+                            peak: AiUsageService.peakBlockTokens,
+                            window: Tr.t("this block")
                         },
                         {
                             label: "WEEK",
                             tokens: AiUsageService.weekTokens,
                             count: AiUsageService.weekMessages,
-                            fraction: AiUsageService.weeklyFraction,
-                            measured: AiUsageService.weeklyMeasured
+                            share: AiUsageService.weekShare,
+                            peak: AiUsageService.peakWeekTokens,
+                            window: Tr.t("this week")
                         }
                     ]
 
@@ -157,38 +175,44 @@ Item {
 
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
-                        spacing: 5
+                        spacing: 6
 
                         Figure {
                             Layout.fillWidth: true
                             label: column.modelData.label
-                            value: `${AiUsageService.compact(column.modelData.tokens)} tokens`
+                            value: AiUsageService.available
+                                ? AiUsageService.compact(column.modelData.tokens) : "—"
                             // Messages as the note: they tell a long session
                             // apart from one large file.
-                            note: AiUsageService.messages(column.modelData.count)
+                            note: AiUsageService.available
+                                ? AiUsageService.messages(column.modelData.count)
+                                : Tr.t("nothing read yet")
                         }
 
-                        // Only against a quota the settings set.
-                        RowLayout {
+                        UsageBar {
                             Layout.fillWidth: true
-                            visible: column.modelData.measured
-                            spacing: 7
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitWidth: 40
+                            implicitHeight: 5
+                            // With no history to measure against, the bar is
+                            // empty rather than full, which is the difference
+                            // between "the biggest on record" and a guess.
+                            progress: column.modelData.share
+                            fillColor: AiUsageService.tone
+                        }
 
-                            UsageBar {
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignVCenter
-                                implicitWidth: 40
-                                implicitHeight: 5
-                                progress: column.modelData.fraction
-                                fillColor: AiUsageService.tone
-                            }
-
-                            Text {
-                                text: AiUsageService.percent(column.modelData.fraction)
-                                font.family: Theme.fontMono
-                                font.pixelSize: Theme.fontSizeLabel
-                                color: Theme.textMuted
-                            }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: column.modelData.peak > 0
+                                    && AiUsageService.available
+                            text: column.modelData.share > 0
+                                ? Tr.t("%1 of the busiest on record").arg(
+                                    AiUsageService.percent(column.modelData.share))
+                                : ""
+                            elide: Text.ElideRight
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeLabel
+                            color: Theme.textMuted
                         }
                     }
                 }

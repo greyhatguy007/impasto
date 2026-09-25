@@ -64,6 +64,13 @@ FocusScope {
         palettes.goTo(root.activePalette)
     }
 
+    // The strip moving is the clearest sign a press was meant for something
+    // else, so an armed cross stands down.
+    Connections {
+        target: wallpapers
+        function onCurrentChanged(): void { root.disarm() }
+    }
+
     Connections {
         target: WallpaperService
         function onWallpapersChanged(): void { root.settle() }
@@ -71,6 +78,12 @@ FocusScope {
     }
 
     function apply(): void {
+        // While the cross is armed, Enter means what the cross means.
+        if (!root.onPalette && root.armed) {
+            root.discard()
+            return
+        }
+        root.disarm()
         if (root.onPalette) {
             if (root.centredPalette)
                 ThemeService.setTheme(root.centredPalette.id)
@@ -80,7 +93,55 @@ FocusScope {
     }
 
     function turn(page: string): void {
+        root.arming = false
         root.panelRequested(page === "palette" ? "palette" : "appearance")
+    }
+
+    // ── DELETING A PICTURE ───────────────────────────────────────────────
+    //
+    // A small cross on the tile in the middle, and only there: a wallpaper
+    // deleted by a stray click is a wallpaper that has to be fetched again.
+    //
+    // It asks twice, because deleting a file is not a thing a panel should do
+    // on one click. The first press arms it — the cross goes red and the
+    // footer says what the next press will do — and the arming is dropped by
+    // anything else: sliding the strip, switching page, Escape, a few seconds
+    // of thinking, or applying something else. Delete removes it, the strip
+    // rescans, and the picture that was on screen stays there.
+    property string arming: ""
+
+    readonly property bool armed: root.arming !== ""
+        && root.arming === (root.centredWallpaper?.path ?? "")
+
+    function press(): void {
+        if (root.armed)
+            root.discard()
+        else {
+            root.arming = root.centredWallpaper?.path ?? ""
+            armingTimer.restart()
+        }
+    }
+
+    // Armed, and the press meant it.
+    function discard(): void {
+        const path = root.centredWallpaper?.path ?? ""
+        root.arming = ""
+        if (path !== "")
+            WallpaperService.removeWallpaper(path)
+    }
+
+    // A press anywhere else takes the arming away rather than acting on it.
+    function disarm(): void {
+        if (root.arming !== "")
+            root.arming = ""
+    }
+
+    // Four seconds is long enough to read the footer and not long enough to
+    // forget which cross was pressed.
+    Timer {
+        id: armingTimer
+        interval: 4000
+        onTriggered: root.arming = ""
     }
 
     // Five daubs, in the board's order: the accent and the four status hues.
@@ -93,8 +154,15 @@ FocusScope {
             : [Theme.accent, Theme.green, Theme.yellow, Theme.red, Theme.blue]
     }
 
-    Keys.onLeftPressed: root.strip.step(-1)
-    Keys.onRightPressed: root.strip.step(1)
+    Keys.onLeftPressed: {
+        root.disarm()
+        root.strip.step(-1)
+    }
+    Keys.onRightPressed: {
+        root.disarm()
+        root.strip.step(1)
+    }
+    Keys.onEscapePressed: root.disarm()
     Keys.onDownPressed: root.turn("palette")
     Keys.onUpPressed: root.turn("wallpaper")
     Keys.onReturnPressed: root.apply()
@@ -177,6 +245,78 @@ FocusScope {
                         }
 
                         AppliedMark { visible: tile.applied }
+
+                        // The cross, in the corner the applied mark does not
+                        // use. Only on the tile in the middle, because a
+                        // wallpaper deleted by a stray press is one that has to
+                        // be fetched again; it fades with the tile's
+                        // centring, and hides itself while a delete of this
+                        // very file is running, so the picture does not vanish
+                        // from under a cross that has already been pressed.
+                        Rectangle {
+                            id: drop
+
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.margins: 6
+                            // 18 at rest, 21 armed: the cross grows a hair so
+                            // the two states are told apart without relying on
+                            // colour alone.
+                            readonly property real resting: 18
+                            readonly property real armed: 21
+                            width: root.armed ? drop.armed : drop.resting
+                            height: width
+                            radius: width / 2
+                            z: 2
+
+                            visible: WallpaperService.removingPath !== tile.modelData.path
+                            opacity: tile.centred ? 1 : 0
+                            color: root.armed ? Theme.indicatorBad
+                                : (dropMouse.containsMouse || root.armed
+                                    ? "#B0000000" : "#73000000")
+
+                            Behavior on color {
+                                ColorAnimation { duration: Theme.durationFast }
+                            }
+                            Behavior on width {
+                                NumberAnimation { duration: Theme.durationFast }
+                            }
+                            Behavior on opacity {
+                                NumberAnimation { duration: Theme.durationFast }
+                            }
+
+                            // The cross takes its own press: it sits above
+                            // the tile, so nothing reaches the strip through it.
+                            MouseArea {
+                                id: dropMouse
+                                anchors.fill: parent
+                                anchors.margins: -3
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.press()
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰅖"
+                                font.family: Theme.fontMono
+                                font.pixelSize: drop.width > 19 ? 12 : 10
+                                color: root.armed ? "#FFFFFF" : Theme.text
+                            }
+                        }
+
+                        // A veil over the tile while its file is being
+                        // unlinked, so the picture goes with the press rather
+                        // than simply not being there after it.
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 1
+                            radius: Theme.radiusMedium
+                            color: Theme.islandSurface
+                            opacity: 0.72
+                            visible: WallpaperService.removingPath
+                                === tile.modelData.path
+                        }
                     }
                 }
             }
@@ -264,13 +404,24 @@ FocusScope {
 
             Text {
                 Layout.fillWidth: true
+                // Armed, the footer stops naming the picture and starts
+                // saying what the next press will do. A refused delete says
+                // why instead, since the picture is still there.
                 text: root.onPalette
                     ? (root.centredPalette?.badge ?? "")
-                    : (root.centredWallpaper?.name ?? "")
+                    : (WallpaperService.reason !== ""
+                        ? `${Tr.t("Kept")} — ${WallpaperService.reason}`
+                        : (root.armed
+                            ? Tr.t("Delete this file? Press the cross again")
+                            : (root.centredWallpaper?.name ?? "")))
                 elide: Text.ElideRight
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
-                color: Theme.textMuted
+                font.weight: root.armed ? Font.DemiBold : Font.Normal
+                color: root.armed || WallpaperService.reason !== ""
+                    ? Theme.indicatorBad : Theme.textMuted
+
+                Behavior on color { ColorAnimation { duration: Theme.durationFast } }
             }
 
             // Position in the strip; the tile's mark already shows what is

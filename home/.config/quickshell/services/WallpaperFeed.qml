@@ -273,4 +273,27 @@ Singleton {
     function isFetched(id: string): bool {
         return root.fetched.indexOf(id) >= 0
     }
+
+    // ── THROWING ONE AWAY ────────────────────────────────────────────────
+    //
+    // A fetch is a file on the disk, and a gallery of files that cannot be
+    // removed is a gallery that only grows. The cross on a fetched tile
+    // deletes that one file, and forgets the id with it, so the same
+    // photograph can be fetched again on another Browse rather than being
+    // remembered as already on the disk when it is not.
+    function discard(photo): void {
+        if (!photo || !root.isFetched(photo.id))
+            return
+        // A download still running would write the file back after the
+        // unlink, so the queue is dropped first.
+        if (root.fetchingId === photo.id)
+            root.skip()
+        root.forget(photo.id)
+        WallpaperService.removeWallpaper(
+            `${root.wallpaperDirectory}/${root.nameOf(photo)}`)
+    }
+
+    function forget(id: string): void {
+        root.fetched = root.fetched.filter(entry => entry !== id)
+    }
 }

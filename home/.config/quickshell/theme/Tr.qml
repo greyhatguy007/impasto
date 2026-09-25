@@ -997,22 +997,30 @@ QtObject {
             "tokens a week": "tokens por semana",
             "models": "modelos",
             "in this block": "en este bloque",
-            "Quotas": "Cuotas",
-            "What to measure the block and the week against.":
-                "Con qué medir el bloque y la semana.",
-            "Block quota": "Cuota del bloque",
-            "Week quota": "Cuota de la semana",
-            "The limits your plan charges you are not written down anywhere the shell can read, so they are asked for here. Set them and the usage face fills against them, going amber at 60% and red at 90%. Leave one at zero and that bar falls back to the block's own clock rather than inventing a percentage.":
-                "Los límites que te cobra tu plan no están escritos en ningún sitio que el shell pueda leer, así que se piden aquí. Ponlos y la cara de uso se llena contra ellos, poniéndose ámbar al 60% y roja al 90%. Deja uno a cero y esa barra cae en el reloj del propio bloque en vez de inventarse un porcentaje.",
-            "no quota set — showing the block's time":
-                "sin cuota: se muestra el tiempo del bloque",
-            "Not set — the block's clock instead":
-                "Sin poner: el reloj del bloque en su lugar",
-            "of the week's quota": "de la cuota de la semana",
-            "Not set — the busiest week on record instead":
-                "Sin poner: la semana más ocupada de las registradas en su lugar",
-            "of the busiest week on record":
-                "de la semana más ocupada de las registradas",
+            "OmniRoute": "OmniRoute",
+            "A gateway, asked what plan it is on.":
+                "Una pasarela, a la que se le pregunta por qué plan va.",
+            "Endpoint": "Endpoint",
+            "https://gateway.example.com/v1": "https://pasarela.ejemplo.com/v1",
+            "API key": "Clave de la API",
+            "The key the gateway issued": "La clave que emitió la pasarela",
+            "Ask it": "Preguntárselo",
+            "Asking\u2026": "Preguntando\u2026",
+            "Ask it now": "Preguntárselo ahora",
+            "this block": "este bloque",
+            "this week": "esta semana",
+            "nothing read yet": "nada leído todavía",
+            "%1 of the busiest on record":
+                "%1 de la más ocupada de las registradas",
+            "STATE": "ESTADO",
+            "asleep": "dormido",
+            "going in": "entrando",
+            "coming out": "saliendo",
+            "battery reported": "carga informada",
+            "no battery report": "sin informe de carga",
+            "Phone": "Teléfono",
+            "idle": "inactivo",
+            "low": "bajo",
             "no transcripts found": "no hay transcripciones",
             "From the desk": "Desde el escritorio",
             "charging": "cargando",

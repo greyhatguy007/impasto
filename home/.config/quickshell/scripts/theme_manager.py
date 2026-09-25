@@ -455,6 +455,65 @@ def list_wallpapers():
     return entries
 
 
+def remove_wallpaper(path):
+    """Delete one picture from the wallpaper directory, and say why not if it
+    could not be done.
+
+    The only file this ever touches is inside the wallpaper directory, which is
+    the whole of the permission: a path from anywhere else, a symlink pointing
+    out of it, or something that is not a picture is refused rather than
+    unlinked. When the deleted file is the applied one the shell's record is
+    cleared with it, so nothing is left pointing at a picture that is gone —
+    the picture already on screen stays there until another is chosen.
+    """
+    if not path:
+        return {"removed": False, "reason": "no path given"}
+
+    try:
+        wanted = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+        root = os.path.realpath(WALLPAPERS_DIR)
+    except OSError as error:
+        return {"removed": False, "reason": str(error)}
+
+    # Inside the directory, by real path: a `..` in the name or a symlink
+    # cannot reach out of it.
+    if os.path.commonpath([wanted, root]) != root or wanted == root:
+        return {"removed": False, "reason": "not in the wallpaper directory"}
+    if not wanted.lower().endswith(IMAGE_EXTENSIONS):
+        return {"removed": False, "reason": "not a picture"}
+    if not os.path.isfile(wanted):
+        return {"removed": False, "reason": "already gone"}
+
+    current = get_current_wallpaper()
+    try:
+        os.remove(wanted)
+    except OSError as error:
+        return {"removed": False, "reason": str(error)}
+
+    if current and os.path.realpath(current) == wanted:
+        forget_current_wallpaper()
+
+    return {"removed": True, "path": wanted, "wasCurrent": current == wanted}
+
+
+def forget_current_wallpaper():
+    """Drop the shell's record of what is applied.
+
+    The state file is where restore reads from, and the link is what
+    `get-current` follows, so both are cleared together: a record of a file
+    that is not there is worse than no record at all.
+    """
+    try:
+        if os.path.islink(CURRENT_WALLPAPER_LINK) or os.path.exists(CURRENT_WALLPAPER_LINK):
+            os.remove(CURRENT_WALLPAPER_LINK)
+    except OSError:
+        pass
+
+    state = load_state()
+    if state.pop("currentWallpaper", None) is not None:
+        save_state(state)
+
+
 def pretty_name(filename):
     """Turn a file name into something worth showing under a thumbnail."""
     stem = os.path.splitext(filename)[0]
@@ -3915,7 +3974,8 @@ def set_theme(theme_id):
 
 
 def main():
-    actions = ("list-wallpapers | get-current | get-state | set-wallpaper <path> [transition] | "
+    actions = ("list-wallpapers | remove-wallpaper <path> | get-current | get-state | "
+               "set-wallpaper <path> [transition] | "
                "restore | extract-colors [path] | set-theme <id> | "
                "push-terminal-palette <json> | push-terminal-font <family> | "
                "apply-vscodium [json] | apply-thunar | apply-vesktop")
@@ -3928,6 +3988,11 @@ def main():
 
     if action == "list-wallpapers":
         print(json.dumps(list_wallpapers()))
+    elif action == "remove-wallpaper":
+        answer = remove_wallpaper(argument or "")
+        print(json.dumps(answer))
+        if not answer.get("removed"):
+            sys.exit(1)
     elif action == "get-current":
         print(get_current_wallpaper())
     elif action == "get-state":

@@ -157,16 +157,27 @@ SettingsSection {
     }
 
     // Where the assistant figures come from, said the way a desk needs it: the
-    // transcripts it is reading and the quota, if any, they are read against.
+    // transcripts it is reading, and — when a gateway will answer — the plan
+    // it is on.
     readonly property string usageNote: {
         if (!AiUsageService.available)
             return Tr.t("No transcripts found")
         const where = AiUsageService.label !== ""
             ? AiUsageService.label : Tr.t("every assistant found")
-        return AiUsageService.measured
-            ? `${where} · ${AiUsageService.messages(AiUsageService.blockMessages)} ${Tr.t("in this block")}`
-            : `${where} · ${Tr.t("no quota set — showing the block's time")}`
+        const counted = `${AiUsageService.messages(AiUsageService.blockMessages)} ${Tr.t("in this block")}`
+        if (AiUsageService.gatewayKnows)
+            return `${where} · ${counted} · ${AiUsageService.gatewayNote}`
+        return `${where} · ${counted}`
     }
+
+    // The gateway group's own line: what the last ask came back with, or what
+    // the shell expects to be able to say about it.
+    property bool asked: false
+    readonly property string gatewayNote: root.asked
+        ? (AiUsageService.testing ? Tr.t("Asking…") : AiUsageService.answerNote)
+        : SettingsService.omniEndpoint !== ""
+            ? Tr.t("Set, and not yet asked")
+            : Tr.t("Asking pi's own gateway")
 
     readonly property string phoneNote: {
         if (!KdeConnectService.available)
@@ -579,13 +590,71 @@ SettingsSection {
                         }
                     }
 
+                    // The cross, on a fetched tile only: it deletes the file
+                    // that fetch wrote, and forgets the photograph with it,
+                    // so the same one can be fetched again later. Armed once,
+                    // the way the appearance panel's cross is, because a file
+                    // deleted by a stray press is a file to fetch again.
+                    Rectangle {
+                        id: drop
+
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: 5
+                        width: 16
+                        height: 16
+                        radius: width / 2
+                        z: 2
+
+                        readonly property bool mine: root.arming === tile.modelData.id
+                        readonly property bool armed: root.arming !== "" && drop.mine
+                        readonly property bool shown: tile.fetched
+                            && !tile.fetching && (dropMouse.containsMouse || drop.armed)
+
+                        visible: drop.shown
+                        color: drop.armed ? Theme.indicatorBad
+                            : (dropMouse.containsMouse ? "#B0000000" : "#73000000")
+
+                        Behavior on color {
+                            ColorAnimation { duration: Theme.durationFast }
+                        }
+
+                        MouseArea {
+                            id: dropMouse
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (drop.armed) {
+                                    root.arming = ""
+                                    WallpaperFeed.discard(tile.modelData)
+                                } else {
+                                    root.arming = tile.modelData.id
+                                    root.disarmTimer.restart()
+                                }
+                            }
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰅖"
+                            font.family: Theme.fontMono
+                            font.pixelSize: 9
+                            color: drop.armed ? "#FFFFFF" : Theme.text
+                        }
+                    }
+
                     Text {
                         anchors.bottom: parent.bottom
                         anchors.left: parent.left
                         anchors.margins: 4
                         width: parent.width - 8
                         visible: tileMouse.hovered
-                        text: tile.modelData.artist
+                        // Wallhaven names a photographer only when the answer
+                        // is asked with a key; without one the id is the name
+                        // the file gets on disk, so it is the name worth seeing.
+                        text: tile.modelData.artist || tile.modelData.id
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: 9
@@ -696,36 +765,45 @@ SettingsSection {
         }
 
         SettingGroup {
-            title: Tr.t("Quotas")
-            note: Tr.t("What to measure the block and the week against.")
-            hint: Tr.t("The limits your plan charges you are not written down anywhere the shell can read, so they are asked for here. Set them and the usage face fills against them, going amber at 60% and red at 90%. Leave one at zero and that bar falls back to the block's own clock rather than inventing a percentage.")
+            title: Tr.t("OmniRoute")
+            note: Tr.t("A gateway, asked what plan it is on.")
+            hint: Tr.t("The endpoint and the key it issued. Leave both empty and pi's own provider entry names the gateway, which is the answer on a desk where the gateway is only ever pi's. With them set, the assistant figures ask the gateway directly for its plan and when its window resets. The key is kept in the shell's settings file on this machine and is never echoed back.")
 
-            SettingSlider {
-                label: Tr.t("Block quota")
-                from: 0
-                to: 4000000
-                stepSize: 100000
-                value: SettingsService.aiBlockQuota
-                reading: {
-                    if (SettingsService.aiBlockQuota <= 0)
-                        return Tr.t("Not set — the block's clock instead")
-                    return `${Math.round(SettingsService.aiBlockQuota / 1000)}k ${Tr.t("tokens per block")}`
+            SettingField {
+                label: Tr.t("Endpoint")
+                placeholder: "https://gateway.example.com/v1"
+                value: SettingsService.omniEndpoint
+                onEdited: value => {
+                    SettingsService.set("omniEndpoint", value.trim())
+                    root.asked = false
                 }
-                onMoved: value => SettingsService.set("aiBlockQuota", Math.round(value))
             }
 
-            SettingSlider {
-                label: Tr.t("Week quota")
-                from: 0
-                to: 40000000
-                stepSize: 1000000
-                value: SettingsService.aiWeekQuota
-                reading: {
-                    if (SettingsService.aiWeekQuota <= 0)
-                        return Tr.t("Not set — the busiest week on record instead")
-                    return `${Math.round(SettingsService.aiWeekQuota / 1000000)}M ${Tr.t("tokens a week")}`
+            SettingField {
+                label: Tr.t("API key")
+                secret: true
+                placeholder: Tr.t("The key the gateway issued")
+                value: SettingsService.omniApiKey
+                onEdited: value => {
+                    SettingsService.set("omniApiKey", value.trim())
+                    root.asked = false
                 }
-                onMoved: value => SettingsService.set("aiWeekQuota", Math.round(value))
+            }
+
+            SettingRow {
+                label: Tr.t("Ask it")
+                reading: root.gatewayNote
+                alarm: root.asked && AiUsageService.gatewayFault === true
+
+                PillButton {
+                    text: AiUsageService.testing ? Tr.t("Asking…") : Tr.t("Ask it now")
+                    icon: "󰓢"
+                    enabled: !AiUsageService.testing
+                    onClicked: {
+                        root.asked = true
+                        AiUsageService.testGateway()
+                    }
+                }
             }
         }
 
@@ -866,6 +944,17 @@ SettingsSection {
     // ── GALLERY HELPERS ─────────────────────────────────────────────────────
 
     property int shuffled: 0
+
+    // Which tile's cross is armed, and how long it stays that way. One at a
+    // time, and dropped again by a fresh press on anything else: a gallery of
+    // files that vanish on one click is a gallery nobody trusts.
+    property string arming: ""
+
+    Timer {
+        id: disarmTimer
+        interval: 4000
+        onTriggered: root.arming = ""
+    }
 
     function skipFetching(): void {
         WallpaperFeed.skip()
