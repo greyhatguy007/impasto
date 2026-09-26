@@ -288,35 +288,6 @@ Item {
                 anchors.margins: 8
                 spacing: 8
 
-                // ── SIGNATURE ───────────────────────────────────────────────
-                //
-                // The name in the script face, beside the palette board painted
-                // in the active palette.
-                Item {
-                    Layout.fillWidth: true
-                    Layout.topMargin: 4
-                    implicitHeight: 38
-
-                    Row {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 8
-
-                        PaletteBoard {
-                            anchors.verticalCenter: parent.verticalCenter
-                            size: 34
-                        }
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "impasto"
-                            font.family: Theme.fontSignature
-                            font.pixelSize: 28
-                            color: Theme.text
-                        }
-                    }
-                }
-
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 30
