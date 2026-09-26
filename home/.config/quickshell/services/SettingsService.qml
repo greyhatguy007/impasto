@@ -65,6 +65,18 @@ Singleton {
     readonly property alias vikunjaProject: config.vikunjaProject
     readonly property alias vikunjaSync: config.vikunjaSync
     readonly property alias obsidianVaultPath: config.obsidianVaultPath
+    readonly property alias taskBackend: config.taskBackend
+    readonly property alias obsidianBoardFile: config.obsidianBoardFile
+
+    // What the choice resolves to. An unset choice follows the machine: a
+    // Vikunja server already configured keeps the board it had, and a machine
+    // with none starts local. Choosing one in Settings stores it outright.
+    readonly property string resolvedTaskBackend: {
+        const chosen = root.taskBackend
+        if (chosen === "local" || chosen === "obsidian" || chosen === "vikunja")
+            return chosen
+        return root.vikunjaUrl.trim() !== "" ? "vikunja" : "local"
+    }
     readonly property alias gcalClientId: config.gcalClientId
     readonly property alias gcalClientSecret: config.gcalClientSecret
     readonly property alias gcalCalendar: config.gcalCalendar
@@ -306,6 +318,7 @@ Singleton {
         "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
         "leetcodeUser", "codeforcesUser", "gitlabUser",
         "vikunjaUrl", "vikunjaToken", "vikunjaProject", "obsidianVaultPath",
+        "taskBackend", "obsidianBoardFile",
         "gcalClientId", "gcalClientSecret", "gcalCalendar",
         "doNotDisturb", "nightLight", "nightTemperature",
         "wallpaperProvider", "wallpaperQuery", "wallpaperKey", "wallpaperWidth",
@@ -801,6 +814,19 @@ Singleton {
         // Empty uses the local JSON notes store. Otherwise notes use the
         // vault's `notes/` folder as Markdown files.
         property string obsidianVaultPath: ""
+
+        // Where the task board lives: "local" (the JSON store beside the
+        // other state), "obsidian" (a Kanban markdown file in the vault) or
+        // "vikunja" (the self-hosted server). Empty follows the machine —
+        // Vikunja when a server is configured, local otherwise — so an
+        // install that already had the server keeps it. One backend is drawn
+        // at a time, and switching never deletes the others. Kept with the
+        // machine, since a vault path is.
+        property string taskBackend: ""
+
+        // The Kanban board's file, relative to the vault folder unless it is
+        // an absolute path. Written with the three lanes when it is missing.
+        property string obsidianBoardFile: "Tasks.md"
 
         // ── GOOGLE CALENDAR ────────────────────────────────────────────
         //

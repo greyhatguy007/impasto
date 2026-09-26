@@ -7,11 +7,98 @@ another desk.
 
 ---
 
+## Where the task board keeps its tasks
+
+The board (`SUPER + K`) draws one backend at a time, chosen in **Settings →
+Integrations → Tasks**. There are three:
+
+| Backend | What it is |
+|---|---|
+| **Local** | The shell's own store (`tasks.json`). Nothing leaves the machine. |
+| **Obsidian** | A Kanban markdown file in a vault, so the same board opens in Obsidian. |
+| **Vikunja** | A self-hosted server, synced both ways. |
+
+Switching never deletes the others: each backend keeps its own tasks, and
+whichever is chosen is the only one on the board, the calendar and the
+widgets. A task written while Obsidian or Vikunja is chosen belongs to it.
+
+---
+
+## Obsidian Kanban — the board in your vault
+
+Choosing **Obsidian** stores the board as a Kanban markdown file in a vault:
+the lines `SUPER + K` already draws *are* the cards of that file, and the
+Kanban plugin opens the same file as a board.
+
+### Setup
+
+1. In impasto: **Settings → Integrations → Tasks → Backend → Obsidian**
+   - **Vault folder** — the folder Obsidian opens as a vault, e.g.
+     `~/Documents/My Vault` (the same setting the notes use).
+   - **Board file** — the file inside it, `Tasks.md` by default.
+2. Add a task on the board. The shell writes the file the first time, with the
+   three lanes **To do**, **Doing** and **Done**; open it in Obsidian
+   afterwards and the Kanban plugin renders it — install it from Obsidian's
+   community plugins, or open the file with any editor.
+
+### The file, as the plugin writes it
+
+```markdown
+---
+kanban-plugin: board
+---
+
+## To do
+
+- [ ] Pay rent @{2026-10-01}
+	<!-- impasto:task-m2k9x1 -->
+	Rent is due on the first.
+
+## Doing
+
+## Done
+```
+
+- `## Heading` is a lane, `- [ ]` a card, `- [x]` one marked done.
+- A card's **details** are the lines indented under it; its **due day** is
+  `@{YYYY-MM-DD}` on the card's line.
+- The comment is the card's identity to the shell; Obsidian does not show it.
+  A card written *in* Obsidian without one is given a key the first time the
+  shell writes the file.
+- Lanes, cards and the `%% kanban:settings %%` block the plugin adds are kept
+  as they are; only the three known lanes are edited. A card that swaps lanes
+  or order is rewritten in place.
+
+### How it behaves
+
+- The file is read every few seconds, so a card added, edited or moved in
+  Obsidian appears on the board without asking.
+- A change made here is written at once (a short debounce groups bursts).
+  Until the file is confirmed written the card carries a small pending mark.
+- Deleting a card removes it from the file. A task written here and deleted
+  before the first write simply goes.
+- A change made in Obsidian while the shell was not looking wins, unless the
+  shell has an unsent change of its own.
+
+### Reasons the board and settings can show
+
+| Reason | Meaning |
+|---|---|
+| Add a vault folder in Settings | No vault folder set |
+| The board file could not be read or written | A filesystem error |
+| The card is no longer on the board | The card was removed in Obsidian mid-write |
+| The change could not be written | The board file refused the change |
+| The script could not be run | The helper script could not start — see
+  [troubleshooting](#troubleshooting) |
+
+---
+
 ## Vikunja — the task board, with a server behind it
 
-A self-hosted Vikunja server turns the local board (`SUPER + K`) into a two-way
-synced one: the server's tasks fold into the same list the board already
-draws, and changes made here are sent back.
+Vikunja is one of the board's backends: choose it in **Settings →
+Integrations → Tasks → Backend**. A self-hosted Vikunja server then turns the
+local board (`SUPER + K`) into a two-way synced one: the server's tasks are
+the board's tasks, and changes made here are sent back.
 
 ### Setup
 
@@ -36,8 +123,9 @@ draws, and changes made here are sent back.
 - Deleting a task the server knows about deletes it there too. Tasks made
   here and deleted before the first send simply go.
 - Turning sync off (or removing a credential) removes the server's tasks from
-  the board but keeps anything typed but not yet sent, as ordinary local
-  tasks.
+  this machine's stored board but keeps anything typed but not yet sent, as
+  ordinary local tasks. Switching the board to another backend merely hides
+  the server's tasks; switch back and they are there again.
 - If the server is unreachable, the last good state stays on screen and the
   footer says why.
 
@@ -240,7 +328,7 @@ repository.
 
 **Credentials look right but nothing syncs** — toggle the service's **Sync**
 switch off and on; that forces an immediate read. `qs log | grep -i
-vikunja` (or `gcalendar`) shows what the scripts said.
+vikunja` (or `obsidian`/`gcalendar`) shows what the scripts said.
 
 **The browser never opens when connecting** — the authorize URL is printed to
 the shell's log; open it by hand: `qs log | grep gcalendar`.

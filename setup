@@ -1233,6 +1233,12 @@ verb_check() {
         "${files[@]}"
     say 'syntax ok'
 
+    # The Kanban helper parses and rewrites a board in a temporary vault, so a
+    # change to the format is caught without a desk to try it on.
+    section 'obsidian kanban'
+    python3 home/.config/quickshell/scripts/obsidian_kanban.py selftest >/dev/null
+    say 'round trips ok'
+
     # Arch calls it luac; Debian and Ubuntu, where CI runs, may only have
     # luac5.4 unless the alternatives point the plain name at it.
     section lua

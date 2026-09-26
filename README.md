@@ -126,7 +126,9 @@ with others along an edge as tabs that peek out under the pointer.
 
 **A board for what has to be done.** `SUPER + K` is to do, doing, done, with
 cards dragged between the lanes, and a task's day shows as a dot under the
-month wherever a month is drawn.
+month wherever a month is drawn. The board lives in one of three places — on
+this machine, as a Kanban file in an Obsidian vault, or on a self-hosted
+Vikunja server — chosen in **Settings → Integrations**, one at a time.
 
 ## Games
 
@@ -166,9 +168,10 @@ under names: *Moon castle*, *Fuji* and *Night bay* come with it.
 
 ## Integrations
 
-**The board can have a server behind it**: point Settings → Integrations at a
-self-hosted Vikunja and the kanban syncs both ways — the server's tasks fold
-into the same list, and changes made here are sent back.
+**The board chooses where it lives**: Settings → Integrations keeps it on this
+machine, as a Kanban markdown file in an Obsidian vault (so the same board
+opens in Obsidian), or on a self-hosted Vikunja server, synced both ways. One
+at a time, and switching never loses the others.
 
 **The calendar can have Google in it**: a desktop OAuth client and one press
 of Connect, and the days around the shell gain your events — blue dots on the

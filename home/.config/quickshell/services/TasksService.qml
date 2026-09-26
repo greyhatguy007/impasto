@@ -19,8 +19,17 @@ import "../theme"
 // board lays them out by state and the calendar marks them by day; both read
 // the same list. Unlike notes (`NotesService`), tasks have a state and a date.
 //
-// Stored in `tasks.json` in the state directory, written after a short
-// debounce.
+// A task belongs to one of three backends, chosen in Settings → Integrations:
+//
+//   local      the JSON store here, `tasks.json`
+//   obsidian   a Kanban markdown file in a vault (`ObsidianService`)
+//   vikunja    a self-hosted server (`VikunjaService`)
+//
+// One is drawn at a time. Every row carries a `source`; `tasks` is the rows of
+// the chosen backend and nothing else, so switching swaps the board without
+// deleting what the others hold. Local and Vikunja rows are persisted here;
+// Obsidian rows live only as long as the board file does, which is read and
+// written through `ObsidianService`.
 Singleton {
     id: root
 
@@ -71,6 +80,26 @@ Singleton {
         return root.dayKey(date)
     }
 
+    // ── BACKEND ─────────────────────────────────────────────────────────────
+    //
+    // Which of the three lists `tasks` draws. The choice is a setting, and
+    // changing it only changes the view: each backend keeps its own rows.
+    readonly property string backend: SettingsService.resolvedTaskBackend
+
+    // Rows from a server are read; rows from a vault are the file. Both are
+    // marked `remote`, the one `dirty` while a change has not gone out.
+    property var obsidianRows: []
+    property var localRows: []
+
+    // The visible board. Obsidian rows are whole (they are never persisted
+    // here); local rows are only those of the chosen backend, so the Vikunja
+    // cache stays out of the local board and vice versa.
+    readonly property var tasks: {
+        if (root.backend === "obsidian")
+            return root.obsidianRows
+        return root.localRows.filter(row => (row.source ?? "local") === root.backend)
+    }
+
     // ── COLLECTION ──────────────────────────────────────────────────────────
     //
     //   key       unique id, e.g. "task-m2k9x1"
@@ -81,8 +110,7 @@ Singleton {
     //   rank      order within its column, lowest first
     //   created   ms since epoch
     //   finished  when it reached `done`, or 0
-    property var tasks: []
-
+    //   source    "local", "obsidian" or "vikunja"
     function normalise(list: var): var {
         const rows = []
         const length = list && typeof list.length === "number" ? list.length : 0
@@ -90,13 +118,19 @@ Singleton {
             const kept = list[index]
             if (!kept || !kept.key)
                 continue
+            // A store written before the backends existed has no `source`:
+            // what Vikunja had folded in is that backend's, the rest local.
+            const source = kept.source === "obsidian" ? "local"
+                : (kept.source === "vikunja" || kept.remote === "vikunja" ? "vikunja" : "local")
             const row = Object.assign({
                 text: "", body: "", state: "todo", due: "", rank: index, created: 0, finished: 0,
-                // Set on the rows that came from a server (see “VIKUNJA” below).
-                remote: "", remoteId: 0, project: 0, dirty: false, tries: 0
-            }, kept)
+                remote: source === "local" ? "" : source, remoteId: 0, project: 0,
+                dirty: false, tries: 0, saved: source === "local"
+            }, kept, { source: source })
             if (!root.states.some(item => item.id === row.state))
                 row.state = "todo"
+            if (row.remote === "")
+                row.remote = source === "local" ? "" : source
             row.remoteId = Number(row.remoteId) || 0
             row.tries = Number(row.tries) || 0
             rows.push(row)
@@ -189,21 +223,57 @@ Singleton {
         return root.pending > 0 ? "nothing dated" : "nothing to do"
     }
 
+    // ── PERSISTED ROWS ──────────────────────────────────────────────────────
+    //
+    // The local store, and the cache of the server's tasks. Obsidian rows are
+    // held in `obsidianState` below instead: the board file is their home.
+
+    function writeLocal(next: var): void {
+        root.localRows = next
+        root.saver.restart()
+    }
+
+    function writeObsidian(next: var): void {
+        root.obsidianRows = next
+    }
+
+    // A row of the chosen backend, with `changes`. `send` marks the change to
+    // go out; the caller decides, since a change that came *from* the other
+    // side must not be sent straight back.
+    function replace(key: string, changes: var, send: bool): void {
+        if (root.backend === "obsidian") {
+            root.writeObsidian(root.obsidianRows.map(row => row.key === key
+                ? Object.assign({}, row, changes, send ? { dirty: true, tries: 0 } : {})
+                : row))
+            if (send)
+                root.obsidianSaver.restart()
+            return
+        }
+        const row = root.localRows.find(item => item.key === key)
+        const outward = send && row !== null && row.source === "vikunja"
+        root.writeLocal(root.localRows.map(item => item.key === key
+            ? Object.assign({}, item, changes, outward ? { dirty: true, tries: 0 } : {})
+            : item))
+        if (outward)
+            root.sender.restart()
+    }
+
     // ── VIKUNJA ─────────────────────────────────────────────────────────────
     //
     // With a server configured the board is the meeting of two lists: the
     // tasks written here and the ones read from Vikunja, folded into this one
     // array so the calendar, the widgets and every face need to know nothing
-    // about either. A row that came from the server carries `remoteId`; a row
-    // with a change not yet sent carries `dirty` and is left alone by the next
-    // read until it has gone.
+    // about either. Only the rows of the chosen backend are drawn.
     //
     // `VikunjaService` does the talking; this is only where the two meet.
 
-    readonly property bool syncing: VikunjaService.syncing
+    readonly property bool readyToSend: root.backend === "vikunja"
+        && VikunjaService.syncing && VikunjaService.configured
 
     readonly property int remoteCount:
-        root.tasks.filter(task => task.remote === "vikunja").length
+        root.localRows.filter(task => task.source === "vikunja").length
+
+    readonly property int obsidianCount: root.obsidianRows.length
 
     // A server task as a board row. Its rank sits past the local ones so a
     // freshly read task does not jump above what was arranged here.
@@ -218,11 +288,13 @@ Singleton {
             created: task.created ? Date.parse(task.created) : 0,
             finished: task.done
                 ? (task.doneAt ? Date.parse(task.doneAt) : Date.now()) : 0,
+            source: "vikunja",
             remote: "vikunja",
             remoteId: task.id,
             project: task.project ?? 0,
             dirty: false,
-            tries: 0
+            tries: 0,
+            saved: true
         }
     }
 
@@ -241,21 +313,22 @@ Singleton {
                 ? (row.finished || (task.doneAt ? Date.parse(task.doneAt) : Date.now())) : 0,
             project: task.project ?? row.project,
             dirty: false,
-            tries: 0
+            tries: 0,
+            saved: true
         })
     }
 
-    function same(list: var): bool {
-        return JSON.stringify(list) === JSON.stringify(root.tasks)
+    function sameStored(list: var): bool {
+        return JSON.stringify(list) === JSON.stringify(root.localRows)
     }
 
-    // Folds one read of the server into the one list: tasks it still has are
+    // Folds one read of the server into the local rows: tasks it still has are
     // updated in place, tasks it has gained are added, and — only on a read
     // that came back whole — tasks it has lost are dropped. A row with an
     // unsent change is left as it is, so a poll never clobbers what was typed
-    // a moment ago.
-    function reconcile(server: var): void {
-        if (!root.syncing)
+    // a moment ago. Rows of the other backends are untouched.
+    function reconcileServer(server: var): void {
+        if (root.backend !== "vikunja" || !VikunjaService.syncing)
             return
         const list = server ?? []
         const complete = VikunjaService.complete
@@ -265,16 +338,14 @@ Singleton {
 
         const next = []
         let retry = false
-        for (const row of root.tasks) {
-            if (row.remote !== "vikunja") {
+        for (const row of root.localRows) {
+            if (row.source !== "vikunja") {
                 next.push(row)
                 continue
             }
             // An unsent change outranks what the server says, whether it is
             // the same task underneath or one the read did not reach.
             if (row.dirty) {
-                // The server is reachable again; give a failed send another
-                // try rather than leaving the change stranded.
                 if (row.tries > 0)
                     retry = true
                 next.push(Object.assign({}, row, { tries: 0 }))
@@ -295,13 +366,13 @@ Singleton {
         let index = 0
         for (const task of list) {
             index += 1
-            if (root.tasks.some(row => row.remoteId === task.id))
+            if (root.localRows.some(row => row.source === "vikunja" && row.remoteId === task.id))
                 continue
             next.push(root.rowFromRemote(task, 1000 + index))
         }
 
-        if (!root.same(next))
-            root.write(next)
+        if (!root.sameStored(next))
+            root.writeLocal(next)
         if (retry)
             root.sender.restart()
     }
@@ -309,47 +380,48 @@ Singleton {
     // Sends a task the server accepted: a new one is linked to it, an edited
     // one is simply no longer dirty.
     function absorb(key: string, task: var): void {
-        const row = root.entry(key)
+        const row = root.localRows.find(item => item.key === key)
         if (!row) {
-            // Removed here while the create was in flight; do not leave it
-            // behind on the server.
             if (task && task.id)
                 VikunjaService.discard(task.id)
             return
         }
         if (task && task.id && !row.remoteId)
-            root.update(key, { remote: "vikunja", remoteId: task.id,
-                               project: task.project ?? 0 }, false)
-        root.update(key, { dirty: false, tries: 0 }, false)
+            root.replace(key, { remoteId: task.id, project: task.project ?? 0 }, false)
+        root.replace(key, { dirty: false, tries: 0, saved: true }, false)
     }
 
     // Sync switched off, or the credentials removed: the rows that came from
     // the server go, since the server still has them. A task made here and not
     // yet sent stays, as an ordinary local one, rather than being lost.
-    function orphan(): void {
+    function orphanServer(): void {
         const next = []
-        for (const row of root.tasks) {
-            if (row.remote !== "vikunja") {
+        for (const row of root.localRows) {
+            if (row.source !== "vikunja") {
                 next.push(row)
                 continue
             }
             if (!row.remoteId)
                 next.push(Object.assign({}, row,
-                    { remote: "", dirty: false, tries: 0 }))
+                    { source: "local", remote: "", dirty: false, tries: 0 }))
         }
-        if (!root.same(next))
-            root.write(next)
+        if (!root.sameStored(next))
+            root.writeLocal(next)
     }
 
     readonly property Connections server: Connections {
         target: VikunjaService
 
         function onTasksChanged(): void {
-            root.reconcile(VikunjaService.tasks)
+            root.reconcileServer(VikunjaService.tasks)
         }
         function onSyncingChanged(): void {
-            if (!VikunjaService.syncing)
-                root.orphan()
+            // Merely switching the board away from Vikunja must not drop the
+            // cache; only the integration being turned off should.
+            if (VikunjaService.syncing
+                    || (VikunjaService.configured && SettingsService.vikunjaSync))
+                return
+            root.orphanServer()
         }
         function onSaved(key, task): void { root.absorb(key, task) }
         function onDeleted(key): void { /* already gone here */ }
@@ -357,16 +429,13 @@ Singleton {
             // The row keeps `dirty`, so nothing typed is lost. `tries` counts
             // the refusals, so a task the server will not take is not sent
             // again and again; a later read or edit starts it over.
-            if (!root.entry(key))
+            if (!root.localRows.some(row => row.key === key))
                 return
-            root.write(root.tasks.map(task => task.key === key
+            root.writeLocal(root.localRows.map(task => task.key === key
                 ? Object.assign({}, task, { tries: (task.tries ?? 0) + 1 })
                 : task))
         }
     }
-
-    // Only what the settings describe as a self-hosted server reaches here.
-    readonly property bool readyToSend: root.syncing && VikunjaService.configured
 
     readonly property Timer sender: Timer {
         interval: 1200
@@ -379,8 +448,8 @@ Singleton {
     function push(): void {
         if (!root.readyToSend)
             return
-        for (const row of root.tasks) {
-            if (row.remote !== "vikunja" || !row.dirty || row.tries >= 3)
+        for (const row of root.localRows) {
+            if (row.source !== "vikunja" || !row.dirty || row.tries >= 3)
                 continue
             if ((row.text ?? "").trim() === "")
                 continue
@@ -388,6 +457,143 @@ Singleton {
                 VikunjaService.update(row)
             else
                 VikunjaService.create(row)
+        }
+    }
+
+    // ── OBSIDIAN ────────────────────────────────────────────────────────────
+    //
+    // The board as a markdown file in a vault. Its rows are the file's cards;
+    // the shell keeps a copy while it is open and sends each change through
+    // `ObsidianService`, which rewrites the card. A card added here carries
+    // `saved: false` until the write comes back.
+
+    readonly property bool readyToSendObsidian:
+        root.backend === "obsidian" && ObsidianService.syncing
+
+    function rowFromObsidian(task: var): var {
+        return {
+            key: task.key,
+            text: task.text ?? "",
+            body: task.body ?? "",
+            state: root.states.some(item => item.id === task.state) ? task.state : "todo",
+            due: task.due ?? "",
+            rank: Number(task.rank) || 0,
+            created: 0,
+            finished: task.done ? Date.now() : 0,
+            source: "obsidian",
+            remote: "obsidian",
+            remoteId: 0,
+            project: 0,
+            dirty: false,
+            tries: 0,
+            saved: true
+        }
+    }
+
+    function sameObsidian(list: var): bool {
+        return JSON.stringify(list) === JSON.stringify(root.obsidianRows)
+    }
+
+    // Folds one read of the board into the rows drawn: a row with an unsent
+    // change is kept as it is (so a poll never clobbers what was typed), the
+    // rest take the file's version, and rows the file has lost are dropped.
+    function reconcileObsidian(server: var): void {
+        if (root.backend !== "obsidian")
+            return
+        const list = server ?? []
+        const waiting = ({})
+        for (const task of list)
+            waiting[task.key] = task
+
+        const next = []
+        for (const row of root.obsidianRows) {
+            if (row.dirty) {
+                if (row.key in waiting)
+                    delete waiting[row.key]
+                next.push(row)
+                continue
+            }
+            if (row.key in waiting) {
+                next.push(root.rowFromObsidian(waiting[row.key]))
+                delete waiting[row.key]
+            }
+            // Gone from the file: drop it.
+        }
+        for (const key in waiting)
+            next.push(root.rowFromObsidian(waiting[key]))
+        if (!root.sameObsidian(next))
+            root.writeObsidian(next)
+    }
+
+    readonly property Connections vault: Connections {
+        target: ObsidianService
+
+        function onTasksChanged(): void {
+            root.reconcileObsidian(ObsidianService.tasks)
+        }
+        function onSyncingChanged(): void {
+            if (ObsidianService.syncing) {
+                // A vault just arrived: anything typed while it waited goes
+                // out now.
+                root.obsidianSaver.restart()
+                return
+            }
+            if (!ObsidianService.configured)
+                root.writeObsidian([])
+        }
+        function onSaved(key): void {
+            const row = root.obsidianRows.find(item => item.key === key)
+            if (!row)
+                return
+            root.writeObsidian(root.obsidianRows.map(item => item.key === key
+                ? Object.assign({}, item, { dirty: false, tries: 0, saved: true })
+                : item))
+        }
+        function onDeleted(key): void { /* already gone here */ }
+        function onRejected(key): void {
+            if (!root.obsidianRows.some(row => row.key === key))
+                return
+            root.writeObsidian(root.obsidianRows.map(task => task.key === key
+                ? Object.assign({}, task, { tries: (task.tries ?? 0) + 1 })
+                : task))
+        }
+    }
+
+    readonly property Timer obsidianSaver: Timer {
+        interval: 1200
+        onTriggered: root.pushObsidian()
+    }
+
+    function pushObsidian(): void {
+        if (!root.readyToSendObsidian)
+            return
+        for (const row of root.obsidianRows) {
+            if (!row.dirty || row.tries >= 3)
+                continue
+            if ((row.text ?? "").trim() === "")
+                continue
+            const column = root.inState(row.state)
+            const index = column.findIndex(item => item.key === row.key)
+            const fresh = root.obsidianRows.find(item => item.key === row.key)
+            if (!fresh)
+                continue
+            if (fresh.saved)
+                ObsidianService.update(fresh, index < 0 ? 0 : index)
+            else
+                ObsidianService.create(fresh, index < 0 ? 0 : index)
+        }
+    }
+
+    // The chosen backend changed: send what the new one is holding, if
+    // anything. The two services read again on their own.
+    readonly property Connections choice: Connections {
+        target: SettingsService
+
+        function onTaskBackendChanged(): void {
+            if (root.backend === "obsidian")
+                root.obsidianSaver.restart()
+            else if (root.backend === "vikunja")
+                root.sender.restart()
         }
     }
 
@@ -523,14 +729,11 @@ Singleton {
     function newKey(): string {
         const stamp = Date.now().toString(36)
         let key = `task-${stamp}`
-        for (let n = 2; root.entry(key); n++)
+        const known = k => root.localRows.some(row => row.key === k)
+            || root.obsidianRows.some(row => row.key === k)
+        for (let n = 2; known(key); n++)
             key = `task-${stamp}-${n}`
         return key
-    }
-
-    function write(next: var): void {
-        root.tasks = next
-        root.saver.restart()
     }
 
     function lastRank(state: string): int {
@@ -541,26 +744,36 @@ Singleton {
     function add(text: string, due = "", state = "todo", body = ""): string {
         const line = (text ?? "").trim()
         const key = root.newKey()
-        // A task written while a server is configured belongs to it and goes
-        // out as soon as it has a line; one written before that stays here.
-        const linked = root.readyToSend
-        root.write(root.tasks.concat([{
+        const chosen = root.states.some(item => item.id === state) ? state : "todo"
+        const source = root.backend === "obsidian" ? "obsidian"
+            : (root.backend === "vikunja" ? "vikunja" : "local")
+        const row = {
             key: key,
             text: line,
             body: body ?? "",
-            state: root.states.some(item => item.id === state) ? state : "todo",
+            state: chosen,
             due: due ?? "",
-            rank: root.lastRank(state),
+            rank: root.lastRank(chosen),
             created: Date.now(),
             finished: 0,
-            remote: linked ? "vikunja" : "",
+            source: source,
+            remote: source === "local" ? "" : source,
             remoteId: 0,
             project: 0,
-            dirty: linked,
-            tries: 0
-        }]))
-        if (linked)
-            root.sender.restart()
+            dirty: source !== "local",
+            tries: 0,
+            saved: source === "local"
+        }
+        if (source === "obsidian") {
+            root.writeObsidian(root.obsidianRows.concat([row]))
+            // A task written before the vault is set stays here until it is.
+            if (root.readyToSendObsidian)
+                root.obsidianSaver.restart()
+        } else {
+            root.writeLocal(root.localRows.concat([row]))
+            if (source === "vikunja" && root.readyToSend)
+                root.sender.restart()
+        }
         root.added(key)
         return key
     }
@@ -577,17 +790,10 @@ Singleton {
         return !task || (task.text ?? "").trim() === ""
     }
 
-    // `send` is false for a change that came *from* the server (`absorb`,
+    // `send` is false for a change that came *from* the other side (`absorb`,
     // `reconcile`), which must not be marked to go straight back.
     function update(key: string, changes: var, send = true): void {
-        const row = root.entry(key)
-        const outward = send && row !== null && row.remote === "vikunja"
-        root.write(root.tasks.map(task => task.key === key
-            ? Object.assign({}, task, changes,
-                outward ? { dirty: true, tries: 0 } : {})
-            : task))
-        if (outward)
-            root.sender.restart()
+        root.replace(key, changes, send)
     }
 
     // To the bottom of the column; `finished` is set only for done.
@@ -613,7 +819,27 @@ Singleton {
         const ranks = {}
         column.forEach((other, position) => { ranks[other.key] = position })
         const moved = task.state !== state
-        root.write(root.tasks.map(other => {
+
+        if (root.backend === "obsidian") {
+            // Every card whose place changed is re-sent, so the file's order
+            // matches the board's.
+            root.writeObsidian(root.obsidianRows.map(other => {
+                const next = Object.assign({}, other)
+                if (ranks[other.key] !== undefined)
+                    next.rank = ranks[other.key]
+                else
+                    return other
+                if (other.key === key && moved) {
+                    next.state = state
+                    next.finished = state === "done" ? Date.now() : 0
+                }
+                return Object.assign(next, { dirty: true, tries: 0 })
+            }))
+            root.obsidianSaver.restart()
+            return
+        }
+
+        root.writeLocal(root.localRows.map(other => {
             if (ranks[other.key] === undefined)
                 return other
             const next = Object.assign({}, other, { rank: ranks[other.key] })
@@ -623,11 +849,11 @@ Singleton {
             }
             // Only a change of lane is worth sending; the order within one is
             // the board's own and the server has nothing to store it in.
-            if (other.key === key && moved && other.remote === "vikunja")
+            if (other.key === key && moved && other.source === "vikunja")
                 Object.assign(next, { dirty: true, tries: 0 })
             return next
         }))
-        if (moved && task.remote === "vikunja")
+        if (moved && task.source === "vikunja")
             root.sender.restart()
     }
 
@@ -647,11 +873,21 @@ Singleton {
         const row = root.entry(key)
         if (!row)
             return
+        if (root.backend === "obsidian") {
+            // A card never written is simply dropped; there is nothing in the
+            // file to delete.
+            if (row.saved)
+                ObsidianService.remove(row)
+            root.writeObsidian(root.obsidianRows.filter(task => task.key !== key))
+            if (root.opened === key)
+                root.opened = ""
+            return
+        }
         // A task the server knows about is removed there too; one that was
         // never sent simply goes.
-        if (row.remote === "vikunja" && row.remoteId)
+        if (row.source === "vikunja" && row.remoteId)
             VikunjaService.remove(row)
-        root.write(root.tasks.filter(task => task.key !== key))
+        root.writeLocal(root.localRows.filter(task => task.key !== key))
         if (root.opened === key)
             root.opened = ""
     }
@@ -684,10 +920,12 @@ Singleton {
 
     // ── STORAGE ─────────────────────────────────────────────────────────────
 
+    // Local and Vikunja rows, kept here. The Obsidian board is its own file,
+    // read and written through `ObsidianService`.
     readonly property Timer saver: Timer {
         interval: 120
         onTriggered: {
-            state.tasks = root.tasks
+            state.tasks = root.localRows
             root.file.writeAdapter()
         }
     }
@@ -695,8 +933,9 @@ Singleton {
     readonly property FileView file: FileView {
         path: `${SettingsService.stateDirectory}/tasks.json`
 
-        onLoaded: root.tasks = root.normalise(state.tasks)
+        onLoaded: root.localRows = root.normalise(state.tasks)
         onLoadFailed: error => {
+            root.localRows = []
             if (error === FileViewError.FileNotFound)
                 writeAdapter()
         }

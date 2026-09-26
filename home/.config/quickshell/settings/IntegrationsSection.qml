@@ -102,6 +102,22 @@ SettingsSection {
             ? Tr.t("task on the server") : Tr.t("tasks on the server")}`
     }
 
+    // What the Obsidian board resolves to: whether the vault is set and the
+    // file there, so the path is not the only thing on screen.
+    readonly property string obsidianNote: {
+        if (!ObsidianService.configured)
+            return Tr.t("Set a vault folder first")
+        if (ObsidianService.reason !== "")
+            return `${Tr.t("Not reading")} — ${ObsidianService.reasonLabel}`
+        if (!ObsidianService.available)
+            return Tr.t("Reaching the board…")
+        if (!ObsidianService.exists)
+            return Tr.t("The board file is not there yet — the first task writes it")
+        const count = ObsidianService.tasks.length
+        return `${Tr.t("Synced")} ${ObsidianService.age} · ${count} ${count === 1
+            ? Tr.t("card") : Tr.t("cards")}`
+    }
+
     // What the calendar connection resolves to, so the key is not the only
     // thing on screen.
     readonly property string calendarNote: {
@@ -211,6 +227,69 @@ SettingsSection {
         visible: root.tab === "tasks"
 
         SettingGroup {
+            title: Tr.t("Task board")
+            note: Tr.t("Where the board's tasks live: on this machine, in a vault, or on a server.")
+            hint: Tr.t("The board draws one backend at a time. Local keeps the tasks in the shell's own store; Obsidian keeps them as a Kanban markdown file in a vault, so the same board opens in Obsidian; Vikunja keeps them on a self-hosted server, synced both ways. Switching never deletes the others — each stays where it is and comes back when chosen again.")
+
+            SettingRow {
+                label: Tr.t("Backend")
+                reading: {
+                    switch (SettingsService.resolvedTaskBackend) {
+                    case "obsidian": return Tr.t("Obsidian — a Kanban file in a vault")
+                    case "vikunja":  return Tr.t("Vikunja — a self-hosted server")
+                    }
+                    return Tr.t("Local — this machine")
+                }
+
+                SegmentedControl {
+                    options: [
+                        { id: "local", label: Tr.t("Local") },
+                        { id: "obsidian", label: Tr.t("Obsidian") },
+                        { id: "vikunja", label: Tr.t("Vikunja") }
+                    ]
+                    current: SettingsService.resolvedTaskBackend
+                    onSelected: id => SettingsService.set("taskBackend", id)
+                }
+            }
+        }
+
+        SettingGroup {
+            visible: SettingsService.resolvedTaskBackend === "obsidian"
+            title: "Obsidian Kanban"
+            note: Tr.t("The board as a markdown file in your vault.")
+            hint: Tr.t("Set the vault folder (or reuse the one from Notes) and the board file inside it; the shell creates the file with To do, Doing and Done the first time you add a task. It is the Kanban plugin's own format, so the file opens as a board in Obsidian, with a card's details and due day kept. Nothing is written while the board is not on Obsidian.")
+
+            SettingField {
+                label: Tr.t("Vault folder")
+                placeholder: "~/Documents/My Vault"
+                commitOnEditingFinished: true
+                value: SettingsService.obsidianVaultPath
+                onEdited: value => SettingsService.set("obsidianVaultPath", value.trim())
+            }
+
+            SettingField {
+                label: Tr.t("Board file")
+                placeholder: "Tasks.md"
+                value: SettingsService.obsidianBoardFile
+                onEdited: value => SettingsService.set("obsidianBoardFile", value.trim())
+            }
+
+            SettingRow {
+                label: Tr.t("Board")
+                reading: root.obsidianNote
+                alarm: ObsidianService.reason !== ""
+
+                PillButton {
+                    text: Tr.t("Refresh")
+                    icon: "󰑐"
+                    enabled: ObsidianService.syncing
+                    onClicked: ObsidianService.refresh()
+                }
+            }
+        }
+
+        SettingGroup {
+            visible: SettingsService.resolvedTaskBackend === "vikunja"
             title: "Vikunja"
             note: Tr.t("A self-hosted task board, folded into the board here.")
             hint: Tr.t("Enter the address of your Vikunja server and an API token from Vikunja's Settings → API tokens. Tasks are read from the server and your own changes are sent back; with no server set, the board stays local. The token is kept in the shell's settings file on this machine.")

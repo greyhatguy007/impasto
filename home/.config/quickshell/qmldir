@@ -47,6 +47,7 @@ singleton GamesService       1.0 services/GamesService.qml
 singleton NotesService       1.0 services/NotesService.qml
 singleton TasksService       1.0 services/TasksService.qml
 singleton VikunjaService     1.0 services/VikunjaService.qml
+singleton ObsidianService    1.0 services/ObsidianService.qml
 singleton GCalendarService   1.0 services/GCalendarService.qml
 singleton DeckService        1.0 services/DeckService.qml
 singleton PickerService      1.0 services/PickerService.qml

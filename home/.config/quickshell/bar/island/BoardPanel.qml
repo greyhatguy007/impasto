@@ -37,6 +37,34 @@ FocusScope {
     readonly property int roomWidth: TasksService.panelWidth - 2 * Theme.panelPadding
     readonly property int roomHeight: TasksService.panelHeight - 2 * Theme.panelPadding
 
+    // Where the board stands with the backend it draws: a vault file, a
+    // server, or nothing to say for the local store.
+    readonly property string backendStatus: {
+        if (TasksService.backend === "obsidian") {
+            if (!ObsidianService.configured)
+                return Tr.t("no vault set")
+            if (ObsidianService.reason !== "")
+                return ObsidianService.reasonLabel
+            return ObsidianService.available
+                ? `${Tr.t("synced")} ${ObsidianService.age}`
+                : Tr.t("reaching the board…")
+        }
+        if (TasksService.backend === "vikunja") {
+            if (!VikunjaService.configured)
+                return Tr.t("no server set")
+            if (VikunjaService.reason !== "")
+                return VikunjaService.reasonLabel
+            return VikunjaService.available
+                ? `${Tr.t("synced")} ${VikunjaService.age}`
+                : Tr.t("reaching the server…")
+        }
+        return ""
+    }
+
+    readonly property bool backendAlarm:
+        TasksService.backend === "obsidian" ? ObsidianService.reason !== ""
+            : (TasksService.backend === "vikunja" && VikunjaService.reason !== "")
+
     Component.onCompleted: root.forceActiveFocus()
     Component.onDestruction: TasksService.leave()
 
@@ -472,12 +500,12 @@ FocusScope {
                                             }
                                         }
 
-                                        // A task on a server, and one whose
-                                        // change has not gone yet.
+                                        // A task on a server, and a card whose
+                                        // change has not gone to the file yet.
                                         Text {
                                             Layout.alignment: Qt.AlignTop
                                             Layout.topMargin: 1
-                                            visible: card.task.remote === "vikunja"
+                                            visible: card.task.dirty || card.task.remote === "vikunja"
                                             text: card.task.dirty ? "󰑐" : "󰖟"
                                             font.family: Theme.fontMono
                                             font.pixelSize: 11
@@ -583,16 +611,14 @@ FocusScope {
                     color: TasksService.overdue.length > 0 ? Theme.red : Theme.textMuted
                 }
 
-                // Where the board stands with its server, if it has one.
+                // Where the board stands with the backend it draws, if that
+                // backend has somewhere to be.
                 Text {
-                    visible: VikunjaService.configured
-                    text: VikunjaService.reason !== "" ? VikunjaService.reasonLabel
-                        : (VikunjaService.available
-                            ? `${Tr.t("synced")} ${VikunjaService.age}`
-                            : Tr.t("reaching the server…"))
+                    visible: root.backendStatus !== ""
+                    text: root.backendStatus
                     font.family: Theme.fontMono
                     font.pixelSize: Theme.fontSizeSmall
-                    color: VikunjaService.reason !== "" ? Theme.red : Theme.textMuted
+                    color: root.backendAlarm ? Theme.red : Theme.textMuted
                 }
             }
         }
