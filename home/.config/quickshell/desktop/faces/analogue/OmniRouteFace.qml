@@ -78,6 +78,61 @@ Instrument {
                 font.pixelSize: Theme.fontSizeLabel
                 color: face.ink.muted
             }
+
+            // The window's days as small bars, busiest provider as a word:
+            // the analogue gauge reads the health, and these read the load.
+            Row {
+                width: parent.width
+                height: 18
+                visible: OmniRouteService.activity.length > 3
+
+                Repeater {
+                    model: ScriptModel {
+                        values: OmniRouteService.activity.slice(-16)
+                        objectProp: "date"
+                    }
+
+                    Item {
+                        id: dayBar
+
+                        required property var modelData
+                        readonly property real share: dayBar.modelData.tokens
+                            / Math.max(1, OmniRouteService.activityMaxTokens)
+
+                        width: parent.width / Math.max(1,
+                            Math.min(16, OmniRouteService.activity.length))
+                        height: parent.height
+
+                        Rectangle {
+                            anchors.bottom: parent.bottom
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: Math.max(2, parent.width - 2)
+                            height: Math.max(2, 18 * dayBar.share)
+                            radius: 1
+                            color: dayBar.share > 0 ? face.ink.accent : face.ink.dim
+                        }
+                    }
+                }
+            }
+
+            Text {
+                width: parent.width
+                text: {
+                    if (!face.ready)
+                        return ""
+                    const budget = OmniRouteService.budgetInfo
+                    const parts = [`p95 ${OmniRouteService.seconds(OmniRouteService.telemetry?.p95 ?? 0)}`]
+                    if (budget && budget.used > 0)
+                        parts.push(OmniRouteService.budgeted
+                            ? `${OmniRouteService.money(budget.used)} / ${OmniRouteService.money(budget.limit)}`
+                            : `${OmniRouteService.money(budget.used)} · no limit`)
+                    return parts.join(" · ")
+                }
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeLabel
+                color: face.ink.muted
+            }
         }
     ]
 }

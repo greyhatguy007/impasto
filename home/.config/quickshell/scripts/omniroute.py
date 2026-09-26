@@ -55,6 +55,7 @@ ROUTES = (
     ("callLogs", "/api/usage/call-logs?limit=16"),
     ("history", "/api/usage/history"),
     ("keys", "/api/keys"),
+    ("budget", "/api/usage/budget"),
     ("health", "/api/monitoring/health"),
     ("storage", "/api/storage/health"),
     ("cache", "/api/cache/stats"),
@@ -456,6 +457,39 @@ def history_of(payload):
     }
 
 
+def budget_of(payload):
+    """The spend against whatever limit the gateway was given.
+
+    The route wants to know whose key it is answering for (`apiKeyId`), and
+    without one it answers for nobody, so the first issued key's id is
+    appended to the ask upstream of this shaping. Every limit the deployment
+    never set reads as zero, and a gateway with no budget at all is a null
+    `budget`, which the shell draws as "no limit" rather than as full.
+    """
+    source = payload or {}
+    limits = [
+        number(source.get("dailyLimitUsd")),
+        number(source.get("weeklyLimitUsd")),
+        number(source.get("monthlyLimitUsd")),
+    ]
+    active = max(limits)
+    used = number(source.get("totalCostMonth"))
+    if active <= 0:
+        return {"limit": 0, "used": round(used, 4), "fraction": 0,
+                "remaining": 0, "hasLimit": False,
+                "daily": round(number(source.get("totalCostToday")), 4),
+                "status": str((source.get("budgetCheck") or {}).get("status") or "")}
+    return {
+        "limit": round(active, 2),
+        "used": round(used, 4),
+        "fraction": round(max(0.0, min(1.0, used / active)), 4),
+        "remaining": round(max(0.0, active - used), 2),
+        "hasLimit": True,
+        "daily": round(number(source.get("totalCostToday")), 4),
+        "status": str((source.get("budgetCheck") or {}).get("status") or ""),
+    }
+
+
 def keys_of(payload):
     """The gateway's issued keys, without the keys themselves."""
     out = []
@@ -463,6 +497,7 @@ def keys_of(payload):
         if not isinstance(row, dict):
             continue
         out.append({
+            "id": str(row.get("id") or ""),
             "name": str(row.get("name") or ""),
             "prefix": str(row.get("keyPrefix") or ""),
             "lastUsed": row.get("lastUsedAt"),
@@ -549,10 +584,23 @@ def report(server, period):
     answer["accounts"] = accounts_of(analytics)
     answer["tiers"] = tiers_of(analytics)
     answer["weekly"] = weekly_of(analytics)
+    answer["activity"] = activity_of(analytics)
+
+    # The budget is asked per key; the keys route has already been through
+    # here only in the loop below, so the id is taken from the analytics'
+    # own by-key rows first, and from the keys route second.
+    budget_route = "/api/usage/budget"
+    rows = analytics.get("byApiKey") or []
+    for row in rows:
+        if isinstance(row, dict) and row.get("apiKeyId"):
+            budget_route = f"/api/usage/budget?apiKeyId={row['apiKeyId']}"
+            break
 
     for key, route in ROUTES:
         if key == "analytics":
             continue
+        if key == "budget":
+            route = budget_route
         payload, missed = get(server, route)
         if payload is None:
             answer["errors"][key] = missed
@@ -560,8 +608,36 @@ def report(server, period):
             continue
         answer[key] = shape(key, payload)
 
+    # When the analytics gave no key id, the keys route is asked for the
+    # budget once more with the first active key's own.
+    if answer["errors"].get("budget") and isinstance(answer.get("keys"), list):
+        for row in answer["keys"]:
+            if row.get("active") and not row.get("revoked") and row.get("id"):
+                payload, missed = get(server,
+                    f"/api/usage/budget?apiKeyId={row['id']}")
+                if payload is not None:
+                    answer["budget"] = budget_of(payload)
+                    answer["errors"].pop("budget", None)
+                break
+
     answer["fetchedAt"] = int(time.time())
     return clean(answer)
+
+
+def activity_of(analytics):
+    """The activity map, newest first: a date and the tokens that day.
+
+    The gateway answers a `{date: tokens}` object over the whole range, so
+    the busiest day of the window is the shell's to find — which is one loop,
+    and gives the 4×4 face a bar chart of days rather than only a trend of
+    buckets.
+    """
+    source = analytics.get("activityMap") or {}
+    out = []
+    for date, tokens in source.items():
+        out.append({"date": str(date), "tokens": int(number(tokens))})
+    out.sort(key=lambda entry: entry["date"], reverse=True)
+    return out
 
 
 def empty_for(key):
@@ -570,6 +646,7 @@ def empty_for(key):
         "keys": [], "health": health_of(None), "storage": storage_of(None),
         "cache": cache_of(None), "rateLimits": [], "tokenHealth": tokens_of(None),
         "telemetry": telemetry_of(None), "resilience": resilience_of(None),
+        "budget": budget_of(None), "activity": [],
         "combos": [],
     }[key]
 
@@ -597,6 +674,10 @@ def shape(key, payload):
         return telemetry_of(payload)
     if key == "resilience":
         return resilience_of(payload)
+    if key == "budget":
+        return budget_of(payload)
+    if key == "activity":
+        return activity_of(payload)
     if key == "combos":
         return combos_of(payload)
     return None

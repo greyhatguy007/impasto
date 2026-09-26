@@ -17,7 +17,9 @@ import "../../../components"
 // The phone as its own shape: an outline, a charge filling from the bottom, and
 // the percentage over it. A notch at the top is the earpiece, so the face reads
 // as a phone and not as a second battery — which is what a desk with both a
-// laptop battery and a phone battery on it otherwise looks like.
+// laptop battery and a phone battery on it otherwise looks like. Around the
+// whole of it runs the charge ring the laptop's battery face has, so the two
+// read at a glance the same way: a ring at the level, the figure beside it.
 Instrument {
     id: face
 
@@ -37,6 +39,22 @@ Instrument {
         anchors.fill: parent
         readonly property real side: Math.min(width, height)
         readonly property real body: side * 0.34
+
+        // The charge as a ring around the whole drawing, in the battery
+        // face's hand: the level is the outline, and the phone sits inside it.
+        // Out of reach, the ring rests as an empty track.
+        RingIndicator {
+            anchors.centerIn: parent
+            width: plate.side * 0.88
+            height: width
+            thickness: 2.5
+            progress: KdeConnectService.hasBattery ? KdeConnectService.charge : 0
+            trackColor: face.ink.dim
+            fillColor: KdeConnectService.hasBattery
+                ? KdeConnectService.tone : face.ink.dim
+
+            Behavior on fillColor { ColorAnimation { duration: Theme.durationMedium } }
+        }
 
         // The outline, with a notch rather than a camera hole: a rounded
         // rectangle with a slot cut out of the top edge. The line is the

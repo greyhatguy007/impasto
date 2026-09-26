@@ -315,62 +315,78 @@ Item {
                 color: root.ink.text
             }
 
-            // The models carrying the traffic, largest first, as bars.
+            // The models carrying the traffic, largest first, as bars, with
+            // the window's trend above them: at this size the shape of the
+            // traffic is worth the same room as the list under it.
             extra: [
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width
-                    spacing: 6
+                    spacing: 8
 
-                    Repeater {
-                        model: ScriptModel {
-                            values: OmniRouteService.models.slice(0, 3)
-                            objectProp: "model"
-                        }
+                    Sparkline {
+                        width: parent.width
+                        height: 26
+                        visible: OmniRouteService.trend.length > 1
+                        values: OmniRouteService.trendTokens
+                        maximum: 0
+                        stroke: root.ink.accent
+                    }
 
-                        Column {
-                            id: modelRow
+                    Column {
+                        width: parent.width
+                        spacing: 6
 
-                            required property var modelData
-
-                            width: parent.width
-                            spacing: 2
-
-                            Row {
-                                width: parent.width
-
-                                Text {
-                                    width: parent.width * 0.6
-                                    text: modelRow.modelData.model
-                                    elide: Text.ElideRight
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: Theme.fontSizeLabel
-                                    color: root.ink.text
-                                }
-
-                                Text {
-                                    width: parent.width * 0.4
-                                    horizontalAlignment: Text.AlignRight
-                                    text: OmniRouteService.money(modelRow.modelData.cost)
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: Theme.fontSizeLabel
-                                    color: root.ink.muted
-                                }
+                        Repeater {
+                            model: ScriptModel {
+                                values: OmniRouteService.models.slice(0, 3)
+                                objectProp: "model"
                             }
 
-                            Rectangle {
+                            Column {
+                                id: modelRow
+
+                                required property var modelData
+
                                 width: parent.width
-                                height: 3
-                                radius: 1.5
-                                color: root.ink.raised
+                                spacing: 2
+
+                                Row {
+                                    width: parent.width
+
+                                    Text {
+                                        width: parent.width * 0.6
+                                        text: modelRow.modelData.model
+                                        elide: Text.ElideRight
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.fontSizeLabel
+                                        color: root.ink.text
+                                    }
+
+                                    Text {
+                                        width: parent.width * 0.4
+                                        horizontalAlignment: Text.AlignRight
+                                        text: `${OmniRouteService.compact(modelRow.modelData.tokens)} · ${OmniRouteService.money(modelRow.modelData.cost)}`
+                                        font.family: Theme.fontFamily
+                                        font.pixelSize: Theme.fontSizeLabel
+                                        color: root.ink.muted
+                                    }
+                                }
 
                                 Rectangle {
-                                    width: parent.width * Math.max(0.02, Math.min(1,
-                                        modelRow.modelData.tokens
-                                            / Math.max(1, OmniRouteService.busiestTokens)))
-                                    height: parent.height
-                                    radius: parent.radius
-                                    color: root.ink.accent
+                                    width: parent.width
+                                    height: 3
+                                    radius: 1.5
+                                    color: root.ink.raised
+
+                                    Rectangle {
+                                        width: parent.width * Math.max(0.02, Math.min(1,
+                                            modelRow.modelData.tokens
+                                                / Math.max(1, OmniRouteService.busiestTokens)))
+                                        height: parent.height
+                                        radius: parent.radius
+                                        color: root.ink.accent
+                                    }
                                 }
                             }
                         }
@@ -429,13 +445,15 @@ Item {
                 ? KdeConnectService.tone : root.ink.muted
             extraShare: 0.5
 
-            // The phone in the mark: its own shape, not a second battery.
-            Text {
+            // The phone in the mark: the charge ring in the battery widget's
+            // hand, with the phone's own glyph inside it. The level is the
+            // ring, so the mark reads beside the laptop's the same way; a
+            // phone with no charge to report rests as the empty track.
+            PhoneWidget {
                 anchors.centerIn: parent
-                text: KdeConnectService.charging ? "󰚦" : "󰒐"
-                font.family: Theme.fontMono
-                font.pixelSize: 28
-                color: root.ink.text
+                size: 44
+                glyphColor: root.ink.text
+                track: root.ink.dim
             }
 
             extra: [

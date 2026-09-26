@@ -227,6 +227,12 @@ FocusScope {
                         color: Theme.islandSurface
                         border.color: tile.centred ? Theme.accent : Theme.islandBorder
                         border.width: tile.centred ? 2 : 1
+                        // Above the tile's own click handler, so the cross and
+                        // the veil inside take their presses rather than the
+                        // strip taking them first. The rectangle is not a
+                        // mouse area itself, so the rest of the tile still
+                        // clicks through to the strip.
+                        z: 2
 
                         Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
 
@@ -286,12 +292,18 @@ FocusScope {
                             }
 
                             // The cross takes its own press: it sits above
-                            // the tile, so nothing reaches the strip through it.
+                            // the tile, so nothing reaches the strip through
+                            // it. Only enabled while shown — an invisible
+                            // cross would otherwise swallow presses aimed at
+                            // the corner of a neighbouring tile.
                             MouseArea {
                                 id: dropMouse
                                 anchors.fill: parent
                                 anchors.margins: -3
                                 hoverEnabled: true
+                                enabled: tile.centred
+                                    && WallpaperService.removingPath
+                                        !== tile.modelData.path
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.press()
                             }

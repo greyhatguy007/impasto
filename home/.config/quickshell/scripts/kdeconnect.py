@@ -58,6 +58,12 @@ TIMEOUT = 12
 POLL_BUSY = 5
 POLL_IDLE = 20
 
+# How long to wait for the phone's battery packet after poking it. The phone
+# sends its charge when the plugin starts and when the level changes; a charge
+# it has never sent is not on the daemon yet, and the poke below asks for it
+# exactly once rather than every pass.
+BATTERY_POKE_WAIT = 1.5
+
 # A title longer than this is a notification, not a track.
 TRACK_LIMIT = 300
 
@@ -439,6 +445,26 @@ def media_of(bus, identifier):
     }
 
 
+def poke_battery(bus, identifier):
+    """Ask the phone to send its charge now, and whether it was asked.
+
+    The battery packet has no request of its own on the wire any more, so the
+    shell's only door is the plugin itself: disabling and enabling it restarts
+    the plugin, and start-up re-reads the phone's battery broadcast and sends
+    the packet. Cheap for the phone, and only ever done while the shell is
+    missing a reading it has been promised.
+    """
+    try:
+        # The device's plugin toggles take the bare plugin name, which is the
+        # battery's here; a daemon that refuses the write is left alone.
+        bus.invoke(identifier, "", "setPluginEnabled", "battery", False)
+        bus.invoke(identifier, "", "setPluginEnabled", "battery", True)
+        time.sleep(BATTERY_POKE_WAIT)
+        return True
+    except Exception:
+        return False
+
+
 def snapshot(bus, device):
     """One device, everything the shell draws."""
     state = {
@@ -457,6 +483,22 @@ def snapshot(bus, device):
     state["battery"] = int(battery.get("charge", -1)) if battery else -1
     state["charging"] = bool(battery.get("isCharging", False)) if battery else False
     state["hasBattery"] = bool(battery.get("hasBattery", False)) if battery else False
+
+    # A phone that has not spoken yet carries its charge as -1: the battery
+    # packet is only sent when the level changes or the plugin starts, and a
+    # phone idle at one level has sent nothing since pairing. Toggling the
+    # plugin off and on makes the phone run the plugin's start-up again, which
+    # re-reads the system battery broadcast and sends the packet at once.
+    # Asked once per unanswered poll, not in a loop: the answer arrives on
+    # the next pass.
+    if state["hasBattery"] is False or state["battery"] < 0:
+        if poke_battery(bus, device["id"]):
+            battery = bus.props(device["id"], "battery",
+                                ["charge", "isCharging", "hasBattery"])
+            if battery:
+                state["battery"] = int(battery.get("charge", -1))
+                state["charging"] = bool(battery.get("isCharging", False))
+                state["hasBattery"] = bool(battery.get("hasBattery", False))
 
     state["media"] = media_of(bus, device["id"])
 

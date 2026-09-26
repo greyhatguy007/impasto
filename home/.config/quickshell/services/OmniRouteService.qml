@@ -58,6 +58,7 @@ Singleton {
     property var callLogs: []
     property var history: null
     property var keys: []
+    property var budget: null
     property var health: null
     property var storage: null
     property var cache: null
@@ -65,6 +66,7 @@ Singleton {
     property var tokenHealth: null
     property var telemetry: null
     property var resilience: null
+    property var activity: []
     property var combos: []
     property var errors: ({})
 
@@ -189,6 +191,7 @@ Singleton {
             root.callLogs = []
             root.history = null
             root.keys = []
+            root.budget = null
             root.health = null
             root.storage = null
             root.cache = null
@@ -196,6 +199,7 @@ Singleton {
             root.tokenHealth = null
             root.telemetry = null
             root.resilience = null
+            root.activity = []
             root.combos = []
             return
         }
@@ -214,6 +218,7 @@ Singleton {
         root.callLogs = report.callLogs ?? []
         root.history = report.history ?? null
         root.keys = report.keys ?? []
+        root.budget = report.budget ?? null
         root.health = report.health ?? null
         root.storage = report.storage ?? null
         root.cache = report.cache ?? null
@@ -221,6 +226,7 @@ Singleton {
         root.tokenHealth = report.tokenHealth ?? null
         root.telemetry = report.telemetry ?? null
         root.resilience = report.resilience ?? null
+        root.activity = report.activity ?? []
         root.combos = report.combos ?? []
         root.errors = report.errors ?? ({})
         root.fetchedAt = Number(report.fetchedAt ?? 0)
@@ -305,6 +311,24 @@ Singleton {
             best = Math.max(best, day.tokens ?? 0)
         return best
     }
+
+    // The busiest day of the whole window, for the 4×4 face's day bars.
+    readonly property real activityMaxTokens: {
+        let best = 1
+        for (const day of root.activity)
+            best = Math.max(best, day.tokens ?? 0)
+        return best
+    }
+
+    // The spend against the gateway's budget, as a fraction. A gateway with
+    // no limit set has no fraction: the face draws the sum and says so.
+    readonly property var budgetInfo: root.budget ?? null
+    readonly property bool budgeted: (root.budgetInfo?.hasLimit ?? false)
+    readonly property real budgetFraction: root.budgeted
+        ? Math.max(0, Math.min(1, root.budgetInfo.fraction ?? 0)) : 0
+    readonly property color budgetTone: root.budgetFraction >= 0.9
+        ? Theme.indicatorBad : (root.budgetFraction >= 0.75
+            ? Theme.indicatorWarn : Theme.accent)
 
     // ── FORMATTING ──────────────────────────────────────────────────────────
 

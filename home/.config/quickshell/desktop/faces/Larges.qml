@@ -308,6 +308,23 @@ Item {
 
         WidgetFace {
 
+            id: gateway
+
+            // The spend against the budget, as one line under the bar: a
+            // gateway with no limit says what it spent instead of guessing
+            // at a fraction.
+            readonly property string budgetLine: {
+                const budget = OmniRouteService.budgetInfo
+                if (!OmniRouteService.available || !budget)
+                    return ""
+                if (!OmniRouteService.budgeted)
+                    return budget.used > 0
+                        ? `${OmniRouteService.money(budget.used)} this period · no limit set`
+                        : "no limit set"
+                return `${OmniRouteService.money(budget.used)} of ${OmniRouteService.money(budget.limit)}`
+                    + ` · ${OmniRouteService.money(budget.daily)} today`
+            }
+
             ink: root.ink
             label: "OmniRoute"
             reading: OmniRouteService.available
@@ -328,11 +345,11 @@ Item {
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width
-                    spacing: 10
+                    spacing: 12
 
                     Sparkline {
                         width: parent.width
-                        height: 42
+                        height: 34
                         values: OmniRouteService.trendTokens
                         maximum: 0
                         stroke: OmniRouteService.tone
@@ -345,6 +362,8 @@ Item {
                             model: [
                                 { label: "SUCCESS", value: `${Math.round(OmniRouteService.success)}%` },
                                 { label: "LATENCY", value: OmniRouteService.seconds(OmniRouteService.latency) },
+                                { label: "P95", value: OmniRouteService.telemetry?.p95 > 0
+                                    ? OmniRouteService.seconds(OmniRouteService.telemetry.p95) : "—" },
                                 { label: "MODELS", value: `${OmniRouteService.modelCount}` }
                             ]
 
@@ -353,7 +372,7 @@ Item {
 
                                 required property var modelData
 
-                                width: parent.width / 3
+                                width: parent.width / 4
                                 spacing: 1
 
                                 Text {
@@ -375,24 +394,91 @@ Item {
                         }
                     }
 
-                    Row {
+                    // The spend against the gateway's own budget, where one
+                    // is set; the sum alone where it is not.
+                    Column {
                         width: parent.width
-                        spacing: 12
+                        spacing: 4
+                        visible: gateway.budgetLine !== ""
 
-                        Repeater {
-                            model: ScriptModel {
-                                values: OmniRouteService.byProvider.slice(0, 2)
-                                objectProp: "provider"
+                        UsageBar {
+
+                            trackColor: root.ink.raised
+                            width: parent.width
+                            progress: OmniRouteService.budgetFraction
+                            fillColor: OmniRouteService.budgetTone
+                            visible: OmniRouteService.budgeted
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: gateway.budgetLine
+                            elide: Text.ElideRight
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeLabel
+                            color: root.ink.muted
+                        }
+                    }
+
+                    // The window's days as bars, newest on the right, with
+                    // the busiest provider under them.
+                    Column {
+                        width: parent.width
+                        spacing: 5
+
+                        Row {
+                            width: parent.width
+                            height: 22
+
+                            Repeater {
+                                model: ScriptModel {
+                                    values: OmniRouteService.activity.slice(-24)
+                                    objectProp: "date"
+                                }
+
+                                Item {
+                                    id: dayBar
+
+                                    required property var modelData
+                                    readonly property real share: dayBar.modelData.tokens
+                                        / Math.max(1, OmniRouteService.activityMaxTokens)
+
+                                    width: parent.width / Math.max(1,
+                                        Math.min(24, OmniRouteService.activity.length))
+                                    height: parent.height
+
+                                    Rectangle {
+                                        anchors.bottom: parent.bottom
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: Math.max(2, parent.width - 2)
+                                        height: Math.max(2, 22 * dayBar.share)
+                                        radius: 1
+                                        color: dayBar.share > 0
+                                            ? OmniRouteService.tone : root.ink.dim
+                                    }
+                                }
                             }
+                        }
 
-                            Text {
-                                required property var modelData
+                        Row {
+                            width: parent.width
+                            spacing: 12
 
-                                text: `${modelData.provider} ${OmniRouteService.compact(modelData.tokens)}`
-                                elide: Text.ElideRight
-                                font.family: Theme.fontMono
-                                font.pixelSize: Theme.fontSizeLabel
-                                color: root.ink.muted
+                            Repeater {
+                                model: ScriptModel {
+                                    values: OmniRouteService.byProvider.slice(0, 2)
+                                    objectProp: "provider"
+                                }
+
+                                Text {
+                                    required property var modelData
+
+                                    text: `${modelData.provider} ${OmniRouteService.compact(modelData.tokens)}`
+                                    elide: Text.ElideRight
+                                    font.family: Theme.fontMono
+                                    font.pixelSize: Theme.fontSizeLabel
+                                    color: root.ink.muted
+                                }
                             }
                         }
                     }
