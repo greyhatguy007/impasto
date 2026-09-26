@@ -64,6 +64,7 @@ Singleton {
     readonly property alias vikunjaToken: config.vikunjaToken
     readonly property alias vikunjaProject: config.vikunjaProject
     readonly property alias vikunjaSync: config.vikunjaSync
+    readonly property alias obsidianVaultPath: config.obsidianVaultPath
     readonly property alias gcalClientId: config.gcalClientId
     readonly property alias gcalClientSecret: config.gcalClientSecret
     readonly property alias gcalCalendar: config.gcalCalendar
@@ -305,7 +306,7 @@ Singleton {
         "displays", "lidPolicy",
         "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
         "leetcodeUser", "codeforcesUser", "gitlabUser",
-        "vikunjaUrl", "vikunjaToken", "vikunjaProject",
+        "vikunjaUrl", "vikunjaToken", "vikunjaProject", "obsidianVaultPath",
         "gcalClientId", "gcalClientSecret", "gcalCalendar",
         "doNotDisturb", "nightLight", "nightTemperature",
         "wallpaperProvider", "wallpaperQuery", "wallpaperKey", "wallpaperWidth",
@@ -792,6 +793,10 @@ Singleton {
         // Two-way sync: pull the server's tasks and push local changes. Off
         // leaves the credentials in place but reads and writes nothing.
         property bool vikunjaSync: true
+
+        // Empty uses the local JSON notes store. Otherwise notes use the
+        // vault's `notes/` folder as Markdown files.
+        property string obsidianVaultPath: ""
 
         // ── GOOGLE CALENDAR ────────────────────────────────────────────
         //

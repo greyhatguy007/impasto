@@ -22,12 +22,12 @@ import "../theme"
 // decks. Placement belongs to `DesktopService`. Notes are only edited in the
 // island, since the desktop never takes the keyboard.
 //
-// Stored in `notes.json` in the state directory, written after a short
-// debounce. Archived before deleted.
+// Stored as one Markdown file per note in the configured Obsidian vault, or
+// in the local JSON store when no vault has been selected.
 Singleton {
     id: root
 
-    readonly property bool ready: true
+    readonly property bool ready: !root.initialScan
 
     // ── PAPER ───────────────────────────────────────────────────────────────
     //
@@ -59,6 +59,20 @@ Singleton {
     //   edited    ms since epoch; the deck sorts by it
     //   archived  hidden from the deck and the desktop
     property var notes: []
+    readonly property string vaultDirectory: {
+        let path = (SettingsService.obsidianVaultPath ?? "").trim()
+        const home = Quickshell.env("HOME") || ""
+        if (path === "~")
+            path = home
+        else if (path.startsWith("~/"))
+            path = `${home}${path.slice(1)}`
+        while (path.length > 1 && path.endsWith("/"))
+            path = path.slice(0, -1)
+        return path
+    }
+    readonly property bool markdownMode: root.vaultDirectory !== ""
+    readonly property string notesDirectory: root.markdownMode
+        ? `${root.vaultDirectory === "/" ? "" : root.vaultDirectory}/notes` : ""
 
     function normalise(list: var): var {
         const rows = []
@@ -125,8 +139,19 @@ Singleton {
     }
 
     function write(next: var): void {
+        const previous = root.notes
         root.notes = next
-        root.saver.restart()
+        if (!root.markdownMode) {
+            root.jsonSaver.restart()
+            return
+        }
+        // Persist only additions and changed records. Polling may have loaded
+        // notes from Obsidian, and those must not cause unrelated rewrites.
+        for (const note of next) {
+            const old = previous.find(row => row.key === note.key)
+            if (!old || root.serialise(old) !== root.serialise(note))
+                root.queueSave(note)
+        }
     }
 
     function add(title: string, text = "", tint = "yellow"): string {
@@ -187,6 +212,8 @@ Singleton {
             return
         DesktopService.removeNote(key)
         root.write(root.notes.filter(note => note.key !== key))
+        if (root.markdownMode)
+            root.deleteFile(key)
         if (root.opened === key)
             root.opened = ""
     }
@@ -255,27 +282,295 @@ Singleton {
 
     // ── STORAGE ─────────────────────────────────────────────────────────────
 
-    readonly property Timer saver: Timer {
-        interval: 120
-        onTriggered: {
-            state.notes = root.notes
-            root.file.writeAdapter()
+    // The file format is intentionally small and regular:
+    // ---\nid: note-...\ncreated: 123\nedited: 123\ntint: yellow\narchived: false\n---\n# Title\n\nBody\n\n[[QuickNotes]]
+    // The frontmatter parser below only accepts these six exact scalar fields.
+    property var knownFiles: ({})
+    property var scanNames: []
+    property int scanIndex: 0
+    property var scanNotes: []
+    property string scanFileName: ""
+    property bool initialScan: true
+
+    function switchStorage(): void {
+        if (!root.markdownMode && root.jsonSaver.running) {
+            jsonState.notes = root.notes
+            root.jsonFile.writeAdapter()
+        }
+        root.jsonSaver.stop()
+        root.pendingWrites = []
+        root.pendingDeletes = []
+        root.initialScan = true
+        root.scanRunning = false
+        root.scanNotes = []
+        root.scanNames = []
+        root.scanIndex = 0
+        root.knownFiles = ({})
+        root.notes = []
+        if (root.markdownMode)
+            root.beginScan()
+        else
+            root.jsonFile.reload()
+    }
+
+    function fileName(key: string): string {
+        return `${root.notesDirectory}/${key}.md`
+    }
+
+    function parseMarkdown(source, fallbackKey) {
+        const match = /^(?:\uFEFF)?---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(String(source || ""))
+        if (!match)
+            return null
+        const fields = ({})
+        for (const line of match[1].split(/\r?\n/)) {
+            const field = /^(id|created|edited|tint|archived): (.*)$/.exec(line)
+            if (!field)
+                return null
+            fields[field[1]] = field[2]
+        }
+        const key = fields.id
+        if (key !== fallbackKey || !/^note-[A-Za-z0-9_-]+$/.test(key)
+                || !/^\d+$/.test(fields.created === undefined ? "" : fields.created)
+                || !/^\d+$/.test(fields.edited === undefined ? "" : fields.edited)
+                || !["true", "false"].includes(fields.archived)
+                || root.tints.indexOf(fields.tint) < 0)
+            return null
+        const lines = match[2].replace(/\r\n/g, "\n").split("\n")
+        let title = ""
+        if (lines.length && lines[0].startsWith("# "))
+            title = lines.shift().slice(2)
+        if (lines[0] === "")
+            lines.shift()
+        let text = lines.join("\n")
+        text = text.replace(/\n*\[\[QuickNotes\]\]\s*$/, "")
+        text = text.replace(/\n+$/, "")
+        return {
+            key: key, title: title, text: text, tint: fields.tint,
+            created: Number(fields.created), edited: Number(fields.edited),
+            archived: fields.archived === "true"
         }
     }
 
-    readonly property FileView file: FileView {
-        path: `${SettingsService.stateDirectory}/notes.json`
+    function serialise(note: var): string {
+        const title = (note.title ?? "").replace(/[\r\n]+/g, " ")
+        const body = (note.text ?? "").replace(/\r\n/g, "\n").replace(/\n+$/, "")
+        return `---\nid: ${note.key}\ncreated: ${Math.max(0, Math.floor(note.created))}\nedited: ${Math.max(0, Math.floor(note.edited))}\ntint: ${note.tint}\narchived: ${note.archived ? "true" : "false"}\n---\n# ${title}\n\n${body}\n\n[[QuickNotes]]\n`
+    }
 
-        onLoaded: root.notes = root.normalise(state.notes)
+    function beginScan(): void {
+        if (!root.markdownMode || root.lister.running || root.scanRunning)
+            return
+        root.scanRunning = true
+        root.lister.command = ["sh", "-c", "if [ -d \"$1\" ]; then mkdir -p -- \"$1/notes\" && find \"$1/notes\" -maxdepth 1 -type f -name 'note-*.md' -printf '%f\\n'; fi", "notes-list", root.vaultDirectory]
+        root.lister.running = true
+    }
+
+    function scanNext(): void {
+        if (!root.markdownMode) {
+            root.scanRunning = false
+            return
+        }
+        if (root.scanIndex >= root.scanNames.length) {
+            const found = ({})
+            const present = ({})
+            for (const name of root.scanNames)
+                if (/^note-[A-Za-z0-9_-]+\.md$/.test(name))
+                    present[`${root.notesDirectory}/${name}`] = true
+            for (const note of root.scanNotes)
+                found[root.fileName(note.key)] = true
+            const before = root.notes
+            const next = root.scanNotes.slice()
+            // Keep the last good version of a file that exists but cannot be parsed.
+            for (const note of before) {
+                const path = root.fileName(note.key)
+                if (present[path] && !found[path])
+                    next.push(note)
+            }
+            for (const note of before) {
+                if (root.writingKey === note.key
+                        || root.pendingWrites.some(row => row.key === note.key)) {
+                    const index = next.findIndex(row => row.key === note.key)
+                    if (index >= 0)
+                        next[index] = note
+                    else
+                        next.push(note)
+                }
+            }
+            // Removed external files also lose any desktop/edge placement.
+            for (const note of before) {
+                if (root.knownFiles[root.fileName(note.key)] && !present[root.fileName(note.key)])
+                    DesktopService.removeNote(note.key)
+            }
+            for (const note of next) {
+                const previous = before.find(row => row.key === note.key)
+                if (previous && !previous.archived && note.archived)
+                    DesktopService.removeNote(note.key)
+            }
+            root.notes = next
+            root.knownFiles = present
+            root.initialScan = false
+            root.scanRunning = false
+            return
+        }
+        const name = root.scanNames[root.scanIndex++]
+        if (!/^note-[A-Za-z0-9_-]+\.md$/.test(name)) {
+            root.scanNext()
+            return
+        }
+        root.scanFileName = name
+        root.reader.command = ["cat", `${root.notesDirectory}/${name}`]
+        root.reader.running = true
+    }
+
+    function acceptRead(contents): void {
+        if (!root.markdownMode)
+            return
+        const base = root.scanFileName.replace(/\.md$/, "")
+        const note = root.parseMarkdown(contents, base)
+        if (note && !root.scanNotes.some(row => row.key === note.key))
+            root.scanNotes.push(note)
+        root.scanNext()
+    }
+
+    function queueSave(note: var): void {
+        const pending = root.pendingWrites.slice()
+        const index = pending.findIndex(row => row.key === note.key)
+        if (index >= 0)
+            pending[index] = note
+        else
+            pending.push(note)
+        root.pendingWrites = pending
+        root.saveNext()
+    }
+
+    property var pendingWrites: []
+    property string writingKey: ""
+    property bool scanRunning: false
+
+    function saveNext(): void {
+        if (root.writerBusy || root.deleting || root.pendingDeletes.length > 0)
+            return
+        if (root.pendingWrites.length === 0)
+            return
+        const note = root.pendingWrites[0]
+        root.pendingWrites = root.pendingWrites.slice(1)
+        root.writingKey = note.key
+        root.writer.path = root.fileName(note.key)
+        root.writer.setText(root.serialise(note))
+        root.writerBusy = true
+    }
+
+    property bool writerBusy: false
+    property bool deleting: false
+    property var pendingDeletes: []
+
+    function deleteFile(key: string): void {
+        root.pendingWrites = root.pendingWrites.filter(note => note.key !== key)
+        root.pendingDeletes = root.pendingDeletes.concat([key])
+        root.deleteNext()
+    }
+
+    function deleteNext(): void {
+        if (root.deleting || root.writerBusy || root.pendingDeletes.length === 0)
+            return
+        const key = root.pendingDeletes[0]
+        root.pendingDeletes = root.pendingDeletes.slice(1)
+        root.deleter.command = ["rm", "-f", "--", root.fileName(key)]
+        root.deleting = true
+        root.deleter.running = true
+    }
+
+    readonly property Process lister: Process {
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.scanNames = text.split(/\r?\n/).filter(name => name !== "")
+                root.scanIndex = 0
+                root.scanNotes = []
+                root.scanNext()
+            }
+        }
+    }
+
+    readonly property Timer jsonSaver: Timer {
+        interval: 120
+        onTriggered: {
+            jsonState.notes = root.notes
+            root.jsonFile.writeAdapter()
+        }
+    }
+
+    readonly property FileView jsonFile: FileView {
+        path: `${SettingsService.stateDirectory}/notes.json`
+        printErrors: false
+        onLoaded: {
+            if (!root.markdownMode) {
+                root.notes = root.normalise(jsonState.notes)
+                root.initialScan = false
+            }
+        }
         onLoadFailed: error => {
+            if (root.markdownMode)
+                return
+            root.notes = []
+            root.initialScan = false
             if (error === FileViewError.FileNotFound)
-                writeAdapter()
+                root.jsonFile.writeAdapter()
         }
 
         JsonAdapter {
-            id: state
-
+            id: jsonState
             property var notes: []
         }
     }
+
+    readonly property Process reader: Process {
+        stdout: StdioCollector {
+            id: readerOutput
+        }
+        stderr: StdioCollector {
+            onStreamFinished: {
+                if (text !== "")
+                    console.warn(`Cannot read note ${root.scanFileName}: ${text.trim()}`)
+            }
+        }
+        onExited: (exitCode, exitStatus) => root.acceptRead(readerOutput.text)
+    }
+
+    readonly property FileView writer: FileView {
+        path: ""
+        atomicWrites: true
+        printErrors: false
+        onSaved: {
+            root.writerBusy = false
+            root.writingKey = ""
+            root.deleteNext()
+            root.saveNext()
+        }
+        onSaveFailed: error => {
+            console.warn(`Cannot save note ${root.writingKey}: ${error}`)
+            root.writerBusy = false
+            root.writingKey = ""
+            root.deleteNext()
+            root.saveNext()
+        }
+    }
+
+    readonly property Process deleter: Process {
+        onExited: (exitCode, exitStatus) => {
+            root.deleting = false
+            root.deleteNext()
+            root.saveNext()
+            root.beginScan()
+        }
+    }
+
+    readonly property Timer poller: Timer {
+        interval: 2000
+        repeat: true
+        running: true
+        onTriggered: root.beginScan()
+    }
+
+    onVaultDirectoryChanged: root.switchStorage()
+    Component.onCompleted: root.switchStorage()
 }

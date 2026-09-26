@@ -329,6 +329,27 @@ SettingsSection {
         }
     }
 
+    // ── NOTES ────────────────────────────────────────────────────────────────
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: root.spacing
+        visible: root.tab === "notes"
+
+        SettingGroup {
+            title: "Obsidian"
+            note: Tr.t("Keep your notes in an Obsidian vault.")
+            hint: Tr.t("Enter the vault folder. Notes are stored in its notes/ subfolder as Markdown files. Leave this empty to use the local JSON notes store.")
+
+            SettingField {
+                label: Tr.t("Vault folder")
+                placeholder: "~/Desktop/Tech Vault"
+                commitOnEditingFinished: true
+                value: SettingsService.obsidianVaultPath
+                onEdited: value => SettingsService.set("obsidianVaultPath", value.trim())
+            }
+        }
+    }
+
     // ── WALLPAPER ───────────────────────────────────────────────────────────
     //
     // A source the settings name, at the width they name. A search fills the

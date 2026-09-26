@@ -24,6 +24,7 @@ Item {
 
     property string placeholder: ""
     property string value: ""
+    property bool commitOnEditingFinished: false
 
     // A token or a password: masked until the eye is pressed.
     property bool secret: false
@@ -82,8 +83,22 @@ Item {
                 selectedTextColor: Theme.accentText
                 clip: true
 
-                onTextEdited: root.edited(input.text)
-                Keys.onEscapePressed: { input.text = ""; root.edited("") }
+                onTextEdited: {
+                    if (!root.commitOnEditingFinished)
+                        root.edited(input.text)
+                }
+                onEditingFinished: {
+                    if (root.commitOnEditingFinished && input.text !== root.value)
+                        root.edited(input.text)
+                }
+                Keys.onEscapePressed: {
+                    if (root.commitOnEditingFinished) {
+                        input.text = root.value
+                    } else {
+                        input.text = ""
+                        root.edited("")
+                    }
+                }
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
