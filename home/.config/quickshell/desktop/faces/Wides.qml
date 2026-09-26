@@ -8,6 +8,7 @@
 // ╰──────────────────────────────────────────────────────────────────────────╯
 
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 
@@ -43,6 +44,8 @@ Item {
         coding: codingWide,
         stats: statsWide,
         ai: aiWide,
+        omniroute: omnirouteWide,
+        phone: phoneWide,
         timer: timerWide,
         media: mediaWide,
         clock: clockWide,
@@ -283,6 +286,210 @@ Item {
                         elide: Text.ElideRight
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall
+                        color: root.ink.muted
+                    }
+                }
+            ]
+        }
+    }
+
+    Component {
+        id: omnirouteWide
+
+        WidgetFace {
+
+            ink: root.ink
+            label: "OmniRoute"
+            reading: !OmniRouteService.available ? "—"
+                : `${Math.round(OmniRouteService.success)}%`
+            note: !OmniRouteService.available ? OmniRouteService.statusNote
+                : `${OmniRouteService.compact(OmniRouteService.requests)} requests · ${OmniRouteService.compact(OmniRouteService.tokens)} tokens`
+            tint: OmniRouteService.tone
+            extraShare: 0.46
+
+            Text {
+                anchors.centerIn: parent
+                text: "󰚩"
+                font.family: Theme.fontMono
+                font.pixelSize: 30
+                color: root.ink.text
+            }
+
+            // The models carrying the traffic, largest first, as bars.
+            extra: [
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    spacing: 6
+
+                    Repeater {
+                        model: ScriptModel {
+                            values: OmniRouteService.models.slice(0, 3)
+                            objectProp: "model"
+                        }
+
+                        Column {
+                            id: modelRow
+
+                            required property var modelData
+
+                            width: parent.width
+                            spacing: 2
+
+                            Row {
+                                width: parent.width
+
+                                Text {
+                                    width: parent.width * 0.6
+                                    text: modelRow.modelData.model
+                                    elide: Text.ElideRight
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeLabel
+                                    color: root.ink.text
+                                }
+
+                                Text {
+                                    width: parent.width * 0.4
+                                    horizontalAlignment: Text.AlignRight
+                                    text: OmniRouteService.money(modelRow.modelData.cost)
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeLabel
+                                    color: root.ink.muted
+                                }
+                            }
+
+                            Rectangle {
+                                width: parent.width
+                                height: 3
+                                radius: 1.5
+                                color: root.ink.raised
+
+                                Rectangle {
+                                    width: parent.width * Math.max(0.02, Math.min(1,
+                                        modelRow.modelData.tokens
+                                            / Math.max(1, OmniRouteService.busiestTokens)))
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: root.ink.accent
+                                }
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    // The phone on a wide face: the charge on the left, and the things KDE
+    // Connect can be asked to do on the right — with a word over each button,
+    // since a glyph alone says nothing. The buttons are driven by the
+    // pairing's own capabilities, which the service keeps once it has seen
+    // them, so a phone that has gone to sleep does not make them vanish.
+    Component {
+        id: phoneWide
+
+        WidgetFace {
+
+            id: face
+
+            // The hint the pointer is on, mirrored from the button below it.
+            property string hoverHint: ""
+
+            readonly property var actions: [
+                { icon: "󰇰", hint: "Ring the phone",
+                  offer: KdeConnectService.can.ring,
+                  ask: () => KdeConnectService.ring() },
+                { icon: "󰍣", hint: "Send a ping",
+                  offer: KdeConnectService.can.ping,
+                  ask: () => KdeConnectService.ping("From the desk") },
+                { icon: "󰎚", hint: "Take the phone's clipboard",
+                  offer: KdeConnectService.can.clipboard,
+                  ask: () => KdeConnectService.fetchClipboard() },
+                { icon: "󰨋", hint: "Send this desk's clipboard",
+                  offer: KdeConnectService.allowsClipboard,
+                  ask: () => KdeConnectService.pushClipboard() },
+                { icon: "󰒧", hint: "Lock the phone",
+                  offer: KdeConnectService.can.lock,
+                  ask: () => KdeConnectService.lock() }
+            ]
+
+            ink: root.ink
+            label: "Phone"
+            reading: KdeConnectService.available && KdeConnectService.hasBattery
+                ? `${KdeConnectService.battery}%`
+                : (KdeConnectService.available
+                    ? (KdeConnectService.type === "tablet" ? "Tablet" : "Phone")
+                    : "—")
+            note: KdeConnectService.available
+                ? (`${KdeConnectService.name}`
+                    + (KdeConnectService.notifications > 0
+                        ? ` · ${KdeConnectService.notifications} notifications` : ""))
+                : KdeConnectService.statusNote
+            tint: KdeConnectService.available && KdeConnectService.hasBattery
+                ? KdeConnectService.tone : root.ink.muted
+            extraShare: 0.5
+
+            // The phone in the mark: its own shape, not a second battery.
+            Text {
+                anchors.centerIn: parent
+                text: KdeConnectService.charging ? "󰚦" : "󰒐"
+                font.family: Theme.fontMono
+                font.pixelSize: 28
+                color: root.ink.text
+            }
+
+            extra: [
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    spacing: 6
+
+                    RowLayout {
+                        width: parent.width
+                        spacing: 6
+
+                        Repeater {
+                            model: face.actions
+
+                            IconButton {
+                                required property var modelData
+
+                                Layout.fillWidth: true
+                                visible: modelData.offer
+                                icon: modelData.icon
+                                iconSize: 13
+                                showBubble: false
+                                iconColor: root.ink.text
+                                hint: modelData.hint
+                                onClicked: modelData.ask()
+                                // Set on entry, and cleared on exit only
+                                // while it is still this button's word: moving
+                                // straight to the next button must not blank it.
+                                onHoveredChanged: {
+                                    if (hovered)
+                                        face.hoverHint = modelData.hint
+                                    else if (face.hoverHint === modelData.hint)
+                                        face.hoverHint = ""
+                                }
+                            }
+                        }
+                    }
+
+                    // The hovered button's word, or what the phone is on.
+                    Text {
+                        width: parent.width
+                        text: {
+                            if (face.hoverHint !== "")
+                                return face.hoverHint
+                            if (KdeConnectService.reachable && KdeConnectService.network)
+                                return `${KdeConnectService.network.name !== ""
+                                    ? KdeConnectService.network.name
+                                    : KdeConnectService.network.type} · ${KdeConnectService.network.strength}%`
+                            return KdeConnectService.chargeNote
+                        }
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeLabel
                         color: root.ink.muted
                     }
                 }

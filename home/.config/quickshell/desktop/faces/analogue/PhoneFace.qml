@@ -28,9 +28,7 @@ Instrument {
     note: KdeConnectService.reachable
         ? (KdeConnectService.charging
             ? `charging · ${KdeConnectService.name}`
-            : (MediaService.origin === "phone" && MediaService.playing
-                ? `playing ${MediaService.artist !== "" ? MediaService.artist : MediaService.title}`
-                : KdeConnectService.chargeNote))
+            : KdeConnectService.chargeNote)
         : KdeConnectService.statusNote
 
     Item {
@@ -93,13 +91,11 @@ Instrument {
             }
         }
 
-        // The bolt while the phone is charging, the play glyph while it is
-        // the desk's music: both are about what the phone is doing, so both
-        // are worth the space.
+        // The bolt while the phone is charging: the one glyph about the
+        // phone itself that the ring cannot say.
         Text {
             anchors.centerIn: parent
-            text: KdeConnectService.charging ? "󰚦"
-                : (MediaService.origin === "phone" && MediaService.playing ? "󰐊" : "")
+            text: KdeConnectService.charging ? "󰚦" : ""
             font.family: Theme.fontMono
             font.pixelSize: Math.round(plate.side * 0.22)
             color: KdeConnectService.available ? face.ink.accent : face.ink.muted

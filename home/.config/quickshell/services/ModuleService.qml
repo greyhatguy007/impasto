@@ -41,6 +41,7 @@ Singleton {
         { id: "media",         name: "Media",         bar: true,  width: 380, height: 172 },
         { id: "timer",         name: "Timer",         bar: true,  width: 348, height: 116 },
         { id: "ai",           name: "Assistant",     bar: true,  width: 356, height: 150 },
+        { id: "omniroute",    name: "OmniRoute",     bar: true,  width: 420, height: 372 },
         { id: "phone",        name: "Phone",         bar: true,  width: 356, height: 172 },
         { id: "battery",       name: "Battery",       bar: true,  width: 320, height: 132 },
         { id: "volume",        name: "Volume",        bar: true,  width: 340, height: 116 },
@@ -137,6 +138,12 @@ Singleton {
                 AiUsageService.subscribe()
             else
                 AiUsageService.release()
+        } else if (id === "omniroute") {
+            // A remote gateway is asked only while a piece shows it.
+            if (on)
+                OmniRouteService.subscribe()
+            else
+                OmniRouteService.release()
         } else if (id === "phone") {
             // One process per desk, and only while something shows the phone.
             if (on)
@@ -176,8 +183,8 @@ Singleton {
     // Modules with a ring face: those whose reading fills from empty to full.
     // A state or a count (the network, the bell, the date, the pending
     // updates) has nothing to fill, so it keeps its symbol in either shape.
-    readonly property var ringed: ["media", "timer", "ai", "phone", "battery",
-        "volume", "brightness", "stats", "bluetooth"]
+    readonly property var ringed: ["media", "timer", "ai", "omniroute", "phone",
+        "battery", "volume", "brightness", "stats", "bluetooth"]
 
     // A piece's own shape when it has one, the bar's when it does not.
     function shapeOf(id: string, own: var): string {
@@ -230,6 +237,9 @@ Singleton {
         case "coding":
             // The activity wall: the same mark its own chip draws.
             return "󰅩"
+        case "omniroute":
+            // The gateway's router mark.
+            return "󰚩"
         }
         return ""
     }
@@ -266,6 +276,11 @@ Singleton {
                 return `${Math.round(AiUsageService.sessionFraction * 100)}%`
             return AiUsageService.blockTokens > 0
                 ? AiUsageService.compact(AiUsageService.blockTokens) : "0%"
+        case "omniroute":
+            // The success rate: the one number about the gateway worth a
+            // figure of its own. Short, like every other chip figure.
+            return OmniRouteService.available
+                ? `${Math.round(OmniRouteService.success)}%` : "—"
         case "phone":
             // A phone that reports no charge names itself, so the chip is
             // never a bare percentage that could belong to the laptop.
@@ -332,6 +347,8 @@ Singleton {
             return TimerService.running ? TimerService.tint : Theme.text
         case "ai":
             return AiUsageService.tone
+        case "omniroute":
+            return OmniRouteService.tone
         case "phone":
             return KdeConnectService.available && KdeConnectService.hasBattery
                 ? KdeConnectService.tone : Theme.indicator
@@ -391,7 +408,10 @@ Singleton {
 
     // The glance the island opens under a resting pointer.
     readonly property int summaryWidth: 384
-    readonly property int summaryHeight: MediaService.available ? 168 : 116
+    // The media row and the gateway row are both optional; the island grows
+    // for whichever are there.
+    readonly property int summaryHeight: (MediaService.available ? 168 : 116)
+        + (OmniRouteService.configured ? 34 : 0)
 
     // ── OPEN DETAIL ─────────────────────────────────────────────────────────
     //
@@ -470,6 +490,10 @@ Singleton {
             // Reading this constructs the lazy singleton, which runs its
             // first query; it turns true a moment later.
             return AiUsageService.available
+        case "omniroute":
+            // Placed as soon as an endpoint is set, so the widget can say
+            // "asking" rather than that there is nowhere to ask.
+            return OmniRouteService.configured
         case "phone":
             // A phone module earns its place only while a phone is
             // answering; KDE Connect being installed is not that.

@@ -32,6 +32,7 @@ Item {
         battery: batteryFace,
         stats: statsFace,
         ai: aiFace,
+        omniroute: omniRouteFace,
         phone: phoneFace,
         media: mediaFace,
         calendar: calendarFace,
@@ -57,6 +58,7 @@ Item {
     Component { id: batteryFace;    BatteryFace    { family: root.family; ink: root.ink } }
     Component { id: statsFace;      StatsFace      { family: root.family; ink: root.ink } }
     Component { id: aiFace;         AiFace         { family: root.family; ink: root.ink } }
+    Component { id: omniRouteFace;  OmniRouteFace  { family: root.family; ink: root.ink } }
     Component { id: phoneFace;      PhoneFace      { family: root.family; ink: root.ink } }
     Component { id: mediaFace;      MediaFace      { family: root.family; ink: root.ink } }
     Component { id: calendarFace;   CalendarFace   { family: root.family; ink: root.ink } }

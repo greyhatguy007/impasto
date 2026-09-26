@@ -30,6 +30,7 @@ Item {
         media: mediaModule,
         timer: timerModule,
         ai: aiModule,
+        omniroute: omniRouteModule,
         phone: phoneModule,
         battery: batteryModule,
         volume: volumeModule,
@@ -62,6 +63,7 @@ Item {
     Component { id: mediaModule;   MediaModule { compact: root.compact } }
     Component { id: timerModule;   TimerModule { compact: root.compact } }
     Component { id: aiModule;      AiModule     { compact: root.compact } }
+    Component { id: omniRouteModule; OmniRouteModule { compact: root.compact } }
     Component { id: phoneModule;   PhoneModule  { compact: root.compact } }
     Component { id: batteryModule; BatteryModule { compact: root.compact } }
     Component { id: volumeModule;     VolumeModule { compact: root.compact } }

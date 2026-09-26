@@ -37,6 +37,7 @@ Item {
         stats: statsLarge,
         media: mediaLarge,
         ai: aiLarge,
+        omniroute: omnirouteLarge,
         phone: phoneLarge,
         notes: notesLarge,
         tasks: tasksLarge,
@@ -294,6 +295,104 @@ Item {
                                 anchors.topMargin: 2
                                 values: trace.modelData.series
                                 stroke: root.ink.accent
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+
+    Component {
+        id: omnirouteLarge
+
+        WidgetFace {
+
+            ink: root.ink
+            label: "OmniRoute"
+            reading: OmniRouteService.available
+                ? OmniRouteService.compact(OmniRouteService.tokens) : "—"
+            note: !OmniRouteService.available ? OmniRouteService.statusNote
+                : `${OmniRouteService.compact(OmniRouteService.requests)} requests · ${OmniRouteService.money(OmniRouteService.cost)}`
+            tint: OmniRouteService.tone
+
+            Text {
+                anchors.centerIn: parent
+                text: "󰚩"
+                font.family: Theme.fontMono
+                font.pixelSize: 34
+                color: OmniRouteService.tone
+            }
+
+            body: [
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    spacing: 10
+
+                    Sparkline {
+                        width: parent.width
+                        height: 42
+                        values: OmniRouteService.trendTokens
+                        maximum: 0
+                        stroke: OmniRouteService.tone
+                    }
+
+                    Row {
+                        width: parent.width
+
+                        Repeater {
+                            model: [
+                                { label: "SUCCESS", value: `${Math.round(OmniRouteService.success)}%` },
+                                { label: "LATENCY", value: OmniRouteService.seconds(OmniRouteService.latency) },
+                                { label: "MODELS", value: `${OmniRouteService.modelCount}` }
+                            ]
+
+                            Column {
+                                id: cell
+
+                                required property var modelData
+
+                                width: parent.width / 3
+                                spacing: 1
+
+                                Text {
+                                    text: cell.modelData.label
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeLabel
+                                    font.weight: Font.DemiBold
+                                    color: root.ink.muted
+                                }
+
+                                Text {
+                                    text: cell.modelData.value
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    font.weight: Font.DemiBold
+                                    color: root.ink.text
+                                }
+                            }
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        spacing: 12
+
+                        Repeater {
+                            model: ScriptModel {
+                                values: OmniRouteService.byProvider.slice(0, 2)
+                                objectProp: "provider"
+                            }
+
+                            Text {
+                                required property var modelData
+
+                                text: `${modelData.provider} ${OmniRouteService.compact(modelData.tokens)}`
+                                elide: Text.ElideRight
+                                font.family: Theme.fontMono
+                                font.pixelSize: Theme.fontSizeLabel
+                                color: root.ink.muted
                             }
                         }
                     }

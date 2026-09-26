@@ -42,6 +42,7 @@ Item {
         coding: codingSquare,
         stats: statsSquare,
         ai: aiSquare,
+        omniroute: omnirouteSquare,
         phone: phoneSquare,
         timer: timerSquare,
         games: gamesSquare,
@@ -274,6 +275,39 @@ Item {
                 anchors.centerIn: parent
                 width: 32
                 height: 32
+                color: root.ink.text
+            }
+        }
+    }
+
+    Component {
+        id: omnirouteSquare
+
+        WidgetFace {
+
+            ink: root.ink
+            label: "OmniRoute"
+            reading: !OmniRouteService.available ? "—"
+                : `${Math.round(OmniRouteService.success)}%`
+            note: !OmniRouteService.available ? OmniRouteService.statusNote
+                : `${OmniRouteService.compact(OmniRouteService.tokens)} tokens · ${OmniRouteService.money(OmniRouteService.cost)}`
+            tint: OmniRouteService.tone
+
+            // The success rate as a ring, and the gateway's mark in the
+            // middle of it.
+            RingIndicator {
+                anchors.fill: parent
+                thickness: 3
+                progress: OmniRouteService.quality
+                trackColor: root.ink.dim
+                fillColor: OmniRouteService.tone
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "󰚩"
+                font.family: Theme.fontMono
+                font.pixelSize: 26
                 color: root.ink.text
             }
         }

@@ -474,6 +474,12 @@ def gateway_quota(server):
     try:
         answer = json.loads(body)
     except (ValueError, TypeError):
+        # Some OmniRoute deployments return text when there's no cached data.
+        # Check for the known text response indicating no cached usage data.
+        text = body.decode("utf-8", errors="ignore").strip()
+        if "No cached usage data available" in text:
+            return {"available": True, "personal": None, "providers": [],
+                    "provider": "", "plan": None, "block": None, "week": None}
         # An empty body is a server that does not route this at all.
         return {"available": False, "reason": "unrouted"}
     if not isinstance(answer, dict):

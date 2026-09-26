@@ -511,6 +511,11 @@ Singleton {
         // ask it rather than pi: its own endpoint, and the key that endpoint
         // issued. Both empty means "let pi's own provider entry say", which
         // is the answer on a desk where the gateway is only ever pi's.
+        // Empty, so no gateway address or key is baked into the repository.
+        // Set them in Settings → Integrations, or let pi's own provider entry
+        // name the gateway (`~/.pi/agent/models.json`), which is what both
+        // scripts fall back to. They are `machineKeys`: per-machine, kept out
+        // of profiles and exports, and never echoed back.
         property string omniEndpoint: ""
         property string omniApiKey: ""
         property string aiLogs: ""

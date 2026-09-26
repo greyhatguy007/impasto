@@ -37,17 +37,27 @@ Item {
     // has a track to show.
     property bool listening: false
 
+    // The gateway, when one is set: a line of its own, so a glance says
+    // whether the routing is well without opening the widget. Gated on the
+    // endpoint alone, so the glance is what asks in the first place when no
+    // OmniRoute piece is on screen.
+    readonly property bool gateway: OmniRouteService.configured
+
     Component.onCompleted: {
         MediaService.subscribe()
         if (MediaService.available) {
             CavaService.subscribe()
             root.listening = true
         }
+        if (root.gateway)
+            OmniRouteService.subscribe()
     }
     Component.onDestruction: {
         MediaService.release()
         if (root.listening)
             CavaService.release()
+        if (root.gateway)
+            OmniRouteService.release()
     }
 
     readonly property var readings: {
@@ -226,6 +236,49 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: islandState.setPinned(true)
                 }
+            }
+        }
+
+        // The gateway, as one quiet line: its mark, the success rate, a
+        // sparkline of the traffic, and what it cost.
+        RowLayout {
+            Layout.fillWidth: true
+            visible: root.gateway
+            spacing: 10
+
+            Text {
+                text: "󰚩"
+                font.family: Theme.fontMono
+                font.pixelSize: 14
+                color: OmniRouteService.tone
+            }
+
+            Text {
+                text: OmniRouteService.available
+                    ? `${Math.round(OmniRouteService.success)}% · ${OmniRouteService.compact(OmniRouteService.requests)} req`
+                    : Tr.t("offline")
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                font.weight: Font.DemiBold
+                color: OmniRouteService.available ? Theme.text : Theme.textMuted
+            }
+
+            Sparkline {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 14
+                visible: OmniRouteService.trend.length > 1
+                values: OmniRouteService.trendTokens
+                maximum: 0
+                stroke: OmniRouteService.tone
+                showDot: false
+            }
+
+            Text {
+                text: OmniRouteService.available
+                    ? OmniRouteService.money(OmniRouteService.cost) : ""
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.textMuted
             }
         }
 

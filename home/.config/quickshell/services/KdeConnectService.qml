@@ -79,6 +79,11 @@ Singleton {
     property var devices: []
     property var plugins: []
 
+    // How many notifications the daemon is holding for the phone. Their
+    // bodies are already on screen as the shell's own; this is only the
+    // count, which is what a widget shows.
+    property int notifications: 0
+
     // What the daemon says this machine may do with this phone.
     readonly property var can: ({
         ring: false, ping: false, clipboard: false, media: false,
@@ -355,9 +360,16 @@ Singleton {
         root.network = report.network ?? null
         root.devices = report.devices ?? []
         root.plugins = report.plugins ?? []
+        root.notifications = report.notifications ?? 0
+        // Capabilities only ever grow while the shell runs. A phone that has
+        // gone to sleep reports no plugins loaded, and a button that vanished
+        // with it is worse than one that answers nothing: the action is the
+        // phone's to refuse, and it says so when it does.
         const offered = report.can ?? {}
-        for (const key in root.can)
-            root.can[key] = offered[key] === true
+        for (const key in root.can) {
+            if (offered[key] === true)
+                root.can[key] = true
+        }
         if (root.allowsMedia)
             root.handOver()
     }

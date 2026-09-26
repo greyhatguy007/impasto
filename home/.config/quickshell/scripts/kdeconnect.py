@@ -395,6 +395,12 @@ def media_of(bus, identifier):
 
     The daemon keeps the phone's players in a list that it only fills after
     being asked once, so a phone that has never been asked is asked here.
+
+    KDE Connect measures the track in milliseconds and the volume in whole
+    percent; everything downstream (MPRIS players report seconds, and a
+    lyrics line is found by the second) expects seconds and a 0-1 volume, so
+    the conversion happens here, once, at the boundary that knows the
+    protocol.
     """
     media = bus.props(identifier, "mprisremote",
                       ["title", "artist", "album", "length", "position",
@@ -413,6 +419,9 @@ def media_of(bus, identifier):
     title = str(media.get("title") or "")
     if not title and not players:
         return None
+    # Milliseconds from the daemon; seconds for everything that reads this.
+    length = int(media.get("length", 0) or 0)
+    position = int(media.get("position", 0) or 0)
     return {
         "title": title,
         "artist": str(media.get("artist") or ""),
@@ -420,9 +429,11 @@ def media_of(bus, identifier):
         "art": str(media.get("localAlbumArtUrl") or ""),
         "player": str(media.get("player") or ""),
         "players": players,
-        "length": int(media.get("length", 0) or 0),
-        "position": int(media.get("position", 0) or 0),
-        "volume": int(media.get("volume", 0) or 0),
+        "length": round(length / 1000),
+        "position": round(position / 1000),
+        # Whole percent from the daemon; a fraction, as every other source's
+        # volume is, so `KdeConnectService.volume` can be read directly.
+        "volume": max(0.0, min(1.0, int(media.get("volume", 0) or 0) / 100)),
         "playing": bool(media.get("isPlaying", False)),
         "canSeek": bool(media.get("canSeek", False)),
     }

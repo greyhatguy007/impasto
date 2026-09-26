@@ -179,6 +179,22 @@ SettingsSection {
             ? Tr.t("Set, and not yet asked")
             : Tr.t("Asking pi's own gateway")
 
+    // The gateway widget's line: what the last full report said, or what the
+    // one-off test came back with.
+    readonly property string gatewayWidgetNote: {
+        if (OmniRouteService.testing)
+            return Tr.t("Asking…")
+        if (OmniRouteService.available)
+            return `${OmniRouteService.host} · ${Math.round(OmniRouteService.success)}% · ${OmniRouteService.money(OmniRouteService.cost)}`
+        if (OmniRouteService.answer) {
+            if (OmniRouteService.answer.available === true)
+                return `${Tr.t("answered")}${OmniRouteService.answer.version !== ""
+                    ? ` · ${OmniRouteService.answer.version}` : ""}`
+            return OmniRouteService.answer.reason ?? ""
+        }
+        return OmniRouteService.statusNote
+    }
+
     readonly property string phoneNote: {
         if (!KdeConnectService.available)
             return KdeConnectService.statusNote
@@ -787,8 +803,8 @@ SettingsSection {
 
         SettingGroup {
             title: Tr.t("OmniRoute")
-            note: Tr.t("A gateway, asked what plan it is on.")
-            hint: Tr.t("The endpoint and the key it issued. Leave both empty and pi's own provider entry names the gateway, which is the answer on a desk where the gateway is only ever pi's. With them set, the assistant figures ask the gateway directly for its plan and when its window resets. The key is kept in the shell's settings file on this machine and is never echoed back.")
+            note: Tr.t("A gateway, read through its own management API.")
+            hint: Tr.t("The endpoint and the key it issued. Leave both empty and pi's own provider entry names the gateway, which is the answer on a desk where the gateway is only ever pi's. With them set, the OmniRoute module draws the gateway's traffic, models, providers, recent requests and server health straight from the endpoint — nothing on this machine is counted. The key lives in the shell's settings file on this machine, is left out of profiles and exports, and is never echoed back.")
 
             SettingField {
                 label: Tr.t("Endpoint")
@@ -824,6 +840,21 @@ SettingsSection {
                         root.asked = true
                         AiUsageService.testGateway()
                     }
+                }
+            }
+
+            // The gateway as a widget: its own figures, and a button that
+            // reads them on demand rather than waiting for the poll.
+            SettingRow {
+                label: Tr.t("Gateway widget")
+                reading: root.gatewayWidgetNote
+                alarm: !OmniRouteService.available && OmniRouteService.fetchedAt > 0
+
+                PillButton {
+                    text: OmniRouteService.testing ? Tr.t("Asking…") : Tr.t("Try the endpoint")
+                    icon: "󰑐"
+                    enabled: !OmniRouteService.testing
+                    onClicked: OmniRouteService.test()
                 }
             }
         }

@@ -34,6 +34,7 @@ singleton CompositorService  1.0 services/CompositorService.qml
 singleton BluetoothService   1.0 services/BluetoothService.qml
 singleton KdeConnectService  1.0 services/KdeConnectService.qml
 singleton AiUsageService     1.0 services/AiUsageService.qml
+singleton OmniRouteService   1.0 services/OmniRouteService.qml
 singleton UpdatesService     1.0 services/UpdatesService.qml
 singleton ModuleService      1.0 services/ModuleService.qml
 singleton ShortcutService    1.0 services/ShortcutService.qml
@@ -129,6 +130,7 @@ ClockModule      1.0 bar/modules/ClockModule.qml
 MediaModule      1.0 bar/modules/MediaModule.qml
 TimerModule      1.0 bar/modules/TimerModule.qml
 AiModule         1.0 bar/modules/AiModule.qml
+OmniRouteModule  1.0 bar/modules/OmniRouteModule.qml
 PhoneModule      1.0 bar/modules/PhoneModule.qml
 BatteryModule    1.0 bar/modules/BatteryModule.qml
 VolumeModule     1.0 bar/modules/VolumeModule.qml

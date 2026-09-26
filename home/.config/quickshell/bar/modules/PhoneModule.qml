@@ -133,64 +133,38 @@ Item {
                 Figure {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
+                    label: Tr.t("Signal")
+                    value: KdeConnectService.reachable && KdeConnectService.network
+                        ? (KdeConnectService.network.name !== ""
+                            ? KdeConnectService.network.name
+                            : KdeConnectService.network.type)
+                        : "—"
+                    note: KdeConnectService.reachable && KdeConnectService.network
+                        ? `${KdeConnectService.network.strength}% ${Tr.t("strong")}`
+                        : Tr.t("no cellular report")
+                }
+
+                Figure {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
                     label: Tr.t("Phone")
                     value: KdeConnectService.type === "tablet"
                         ? Tr.t("tablet") : Tr.t("phone")
-                    note: KdeConnectService.hasBattery
-                        ? Tr.t("battery reported") : Tr.t("no battery report")
+                    note: KdeConnectService.notifications > 0
+                        ? `${KdeConnectService.notifications} ${Tr.t("notifications")}`
+                        : (KdeConnectService.hasBattery
+                            ? Tr.t("battery reported") : Tr.t("no battery report"))
                 }
             }
 
-            // The phone's music, as the desk's music while it is playing: the
-            // transport here is the same one the island shows.
-            RowLayout {
-                Layout.fillWidth: true
-                visible: MediaService.origin === "phone"
-                spacing: 9
-
-                Text {
-                    Layout.fillWidth: true
-                    text: MediaService.title !== "" ? MediaService.title : "Paused"
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                    color: MediaService.title !== "" ? Theme.text : Theme.textMuted
-                }
-
-                IconButton {
-                    icon: "󰓮"
-                    iconSize: 12
-                    onClicked: MediaService.previous()
-                }
-
-                IconButton {
-                    icon: MediaService.playing ? "󰏤" : "󰐊"
-                    iconSize: 12
-                    onClicked: MediaService.toggle()
-                }
-
-                IconButton {
-                    icon: "󰓭"
-                    iconSize: 12
-                    onClicked: MediaService.next()
-                }
-            }
-
-            // The phone's own volume, which is the only level a bar module has
-            // room for; the desk's own volume has a module of its own. The
-            // reading is the phone's, so a change made there moves this track
-            // too, and not only the other way round.
-            SliderRow {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 26
-                visible: MediaService.origin === "phone"
-                icon: "󰕾"
-                value: Math.round(KdeConnectService.volume * 100)
-                available: KdeConnectService.can.media
-                onMoved: value => KdeConnectService.setVolume(value / 100)
-            }
-
-            // The actions this pairing actually offers.
+            // What the phone will do when asked, with a word over each button
+            // so a glyph is never the only thing explaining itself.
+            //
+            // The phone's own music is deliberately not here: the desk's music
+            // widget already plays the phone's track as its own, so a second
+            // transport in this card would be the same thing twice — and it
+            // fought the lyrics the player draws. Only what KDE Connect does
+            // and the player does not is left.
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
@@ -203,15 +177,20 @@ Item {
                     // left to the phone, which already receives files over
                     // the wire on its own.
                     model: [
-                        { icon: "󰇰", ask: () => KdeConnectService.ring(),
+                        { icon: "󰇰", hint: Tr.t("Ring the phone"),
+                          ask: () => KdeConnectService.ring(),
                           offer: KdeConnectService.can.ring },
-                        { icon: "󰍣", ask: () => KdeConnectService.ping(Tr.t("From the desk")),
+                        { icon: "󰍣", hint: Tr.t("Send a ping"),
+                          ask: () => KdeConnectService.ping(Tr.t("From the desk")),
                           offer: KdeConnectService.can.ping },
-                        { icon: "󰎚", ask: () => KdeConnectService.fetchClipboard(),
+                        { icon: "󰎚", hint: Tr.t("Take the phone's clipboard"),
+                          ask: () => KdeConnectService.fetchClipboard(),
                           offer: KdeConnectService.can.clipboard },
-                        { icon: "󰨋", ask: () => KdeConnectService.pushClipboard(),
+                        { icon: "󰨋", hint: Tr.t("Send this desk's clipboard"),
+                          ask: () => KdeConnectService.pushClipboard(),
                           offer: KdeConnectService.allowsClipboard },
-                        { icon: "󰒧", ask: () => KdeConnectService.lock(),
+                        { icon: "󰒧", hint: Tr.t("Lock the phone"),
+                          ask: () => KdeConnectService.lock(),
                           offer: KdeConnectService.can.lock }
                     ]
 
@@ -222,6 +201,7 @@ Item {
                         visible: modelData.offer
                         icon: modelData.icon
                         iconSize: 13
+                        hint: modelData.hint
                         onClicked: modelData.ask()
                     }
                 }

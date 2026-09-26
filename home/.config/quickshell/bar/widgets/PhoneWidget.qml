@@ -15,8 +15,8 @@ import "../../components"
 
 // The paired phone's charge as a ring, in the same hand as the battery
 // widget, so a desk with a laptop and a phone on it can read both. The
-// middle says what the phone is doing: its charge, a bolt while charging, or
-// a play glyph while it is the desk's music.
+// middle says what the phone is doing: its charge, or a bolt while charging.
+// The phone's music is the music widget's business, not this ring's.
 //
 // A phone that reports no battery still shows a track rather than a lie, and
 // the glyph in the middle is the phone's own.
@@ -47,10 +47,7 @@ RingIndicator {
     Text {
         anchors.centerIn: parent
         text: KdeConnectService.reachable && KdeConnectService.charging ? "󰚦"
-            : (MediaService.origin === "phone" && MediaService.playing
-                ? "󰐊"
-                : (KdeConnectService.hasBattery
-                    ? "󰓢" : "󰒐"))
+            : (KdeConnectService.hasBattery ? "󰓢" : "󰒐")
         font.family: Theme.fontMono
         font.pixelSize: Math.round(root.size * 0.44)
         color: KdeConnectService.reachable
