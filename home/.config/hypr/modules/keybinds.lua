@@ -281,7 +281,6 @@ bind(mainMod .. " + comma",     hl.dsp.global("quickshell:settings"),   { descri
 bind(mainMod .. " + T",         hl.dsp.global("quickshell:appearance"), { description = "Shell · Open appearance" })
 bind(mainMod .. " + SHIFT + T", hl.dsp.global("quickshell:palette"),    { description = "Shell · Open the palette" })
 bind(mainMod .. " + U",         hl.dsp.global("quickshell:stats"),      { description = "Shell · Open system statistics" })
-bind(mainMod .. " + SHIFT + P", hl.dsp.global("quickshell:pet"),        { description = "Shell · Open the pet" })
 bind(mainMod .. " + G",         hl.dsp.global("quickshell:games"),      { description = "Shell · Open the games" })
 bind(mainMod .. " + S",         hl.dsp.global("quickshell:notes"),      { description = "Shell · Open the notes" })
 bind(mainMod .. " + K",         hl.dsp.global("quickshell:board"),      { description = "Shell · Open the task board" })

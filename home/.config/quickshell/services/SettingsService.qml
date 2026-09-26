@@ -73,7 +73,6 @@ Singleton {
     readonly property alias codeforcesUser: config.codeforcesUser
     readonly property alias gitlabUser: config.gitlabUser
     readonly property alias codingPlatform: config.codingPlatform
-    readonly property alias petStyle: config.petStyle
     readonly property alias launcherResults: config.launcherResults
     readonly property alias launcherOrder: config.launcherOrder
     readonly property alias launcherFits: config.launcherFits
@@ -822,10 +821,6 @@ Singleton {
         property string codeforcesUser: ""
         property string gitlabUser: ""
         property string codingPlatform: "all"
-
-        // One of `PetService.styles`: how the pet is drawn, everywhere it is
-        // drawn.
-        property string petStyle: "creature"
 
         // Idle timeouts in minutes, 0 = never; all off by default.
         // `IdleService` runs one monitor per value.

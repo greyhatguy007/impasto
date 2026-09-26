@@ -43,7 +43,6 @@ Item {
         calendar: calendarBlock,
         notifications: notificationsBlock,
         impasto: impastoBlock,
-        pet: petBlock,
         clock: clockBlock,
         games: gamesBlock,
         notes: notesBlock,
@@ -136,14 +135,6 @@ Item {
         ImpastoBlock {
             cols: root.shape.cols
             rows: root.shape.rows
-        }
-    }
-
-    Component {
-        id: petBlock
-        PetBlock {
-            rows: root.shape.rows
-            onPanelRequested: panel => root.panelRequested(panel)
         }
     }
 

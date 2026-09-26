@@ -42,7 +42,6 @@ Item {
         updates: updatesFace,
         network: networkFace,
         bluetooth: bluetoothFace,
-        pet: creatureFace,
         games: gamesFace,
         photo: photoFace
     })
@@ -68,7 +67,6 @@ Item {
     Component { id: updatesFace;    UpdatesFace    { family: root.family; ink: root.ink } }
     Component { id: networkFace;    NetworkFace    { family: root.family; ink: root.ink } }
     Component { id: bluetoothFace;  BluetoothFace  { family: root.family; ink: root.ink } }
-    Component { id: creatureFace;   CreatureFace   { family: root.family; ink: root.ink } }
     Component { id: gamesFace;      GamesFace      { family: root.family; ink: root.ink } }
     Component { id: photoFace;      PhotoFace      { family: root.family; ink: root.ink; row: root.row } }
 }

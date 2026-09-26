@@ -21,11 +21,7 @@
         "id": "battery",
         "figure": "on"
       },
-      "split",
-      {
-        "id": "pet",
-        "shape": "ring"
-      }
+      "split"
     ],
     "chipShape": "icon",
     "chipFigure": "off",
@@ -40,13 +36,6 @@
         "row": 0,
         "key": "clock-13-0",
         "theme": "analogue"
-      },
-      {
-        "id": "pet",
-        "family": "2x2",
-        "col": 15,
-        "row": 0,
-        "key": "pet-15-0"
       },
       {
         "id": "calendar",
@@ -162,7 +151,6 @@
       "Shell · Open appearance": "SUPER + T",
       "Shell · Open the palette": "SUPER + SHIFT + T",
       "Shell · Open system statistics": "SUPER + U",
-      "Shell · Open the pet": "SUPER + SHIFT + P",
       "Shell · Open the games": "SUPER + G",
       "Shell · Open the notes": "SUPER + S",
       "Shell · Open the task board": "SUPER + K",

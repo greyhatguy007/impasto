@@ -50,20 +50,20 @@ Item {
                  { id: "modules", label: Tr.t("The bar") },
                  { id: "workspaces", label: Tr.t("Workspaces") },
                  { id: "notifications", label: Tr.t("Notifications") }],
-          keywords: "bar island notch height margin width full span workspaces unified layout island bar band notification toast do not disturb silence timeout clock time date seconds format beside running modules layout left right split drag catalogue chip icon ring figure hover shape media claude battery timer volume brightness network wifi bluetooth weather stats cpu updates pet capture record screenshot buttons every screen monitors lyrics pin pinned line sing along karaoke marquee",
+          keywords: "bar island notch height margin width full span workspaces unified layout island bar band notification toast do not disturb silence timeout clock time date seconds format beside running modules layout left right split drag catalogue chip icon ring figure hover shape media claude battery timer volume brightness network wifi bluetooth weather stats cpu updates capture record screenshot buttons every screen monitors lyrics pin pinned line sing along karaoke marquee",
           page: barPage },
 
         { id: "widgets", category: "shell", icon: "󰕮", label: Tr.t("Desktop"),
           blurb: Tr.t("What sits on the wallpaper, under the windows."),
           tabs: [{ id: "modules", label: Tr.t("Module settings") },
                  { id: "widgets", label: Tr.t("The widgets") }],
-          keywords: "widgets desktop wallpaper widget place drag size shape capsule bare outline accent style palette ink tray edit arrange clock calendar notes note sticky theme analogue modern opacity weather location place city github gitlab contributions username handwriting edges deck pet creature plush paper pixel egg species style spectrum cava visualiser visualizer bars audio music leetcode codeforces practice activity coding solved submissions streak source all toggle",
+          keywords: "widgets desktop wallpaper widget place drag size shape capsule bare outline accent style palette ink tray edit arrange clock calendar notes note sticky theme analogue modern opacity weather location place city github gitlab contributions username handwriting edges deck spectrum cava visualiser visualizer bars audio music leetcode codeforces practice activity coding solved submissions streak source all toggle",
           page: widgetsPage },
 
         { id: "controls", category: "shell", icon: "󰕰", label: Tr.t("Control Centre"),
           blurb: Tr.t("What the island opens onto when you click it."),
           tabs: [],
-          keywords: "controls control centre center panel doors buttons row pet games notes board tasks kanban stats blocks grid toggles tiles arrange edit tray wifi bluetooth airplane microphone focus",
+          keywords: "controls control centre center panel doors buttons row games notes board tasks kanban stats blocks grid toggles tiles arrange edit tray wifi bluetooth airplane microphone focus",
           page: controlsPage },
 
         { id: "dock", category: "shell", icon: "󱂩", label: Tr.t("Dock"),

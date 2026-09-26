@@ -68,11 +68,10 @@ Item {
         x: root.pad
         anchors.verticalCenter: parent.verticalCenter
         visible: !root.ring
-        width: root.moduleId === "pet" ? root.size + 2 : (symbol.visible ? symbol.implicitWidth : root.size)
+        width: symbol.visible ? symbol.implicitWidth : root.size
         height: root.size + 2
 
-        // The usage ring and the pet have no font glyph and draw their own
-        // mark at glyph size.
+        // The usage ring has no font glyph and draws its own mark at glyph size.
         Loader {
             anchors.centerIn: parent
             active: !root.ring && root.moduleId === "ai"
@@ -83,21 +82,11 @@ Item {
             }
         }
 
-        Loader {
-            anchors.centerIn: parent
-            active: !root.ring && root.moduleId === "pet"
-            sourceComponent: PetFace {
-                width: root.size + 2
-                height: root.size + 2
-                size: root.size + 2
-            }
-        }
-
         Text {
             id: symbol
 
             anchors.centerIn: parent
-            visible: root.moduleId !== "ai" && root.moduleId !== "pet"
+            visible: root.moduleId !== "ai"
             text: ModuleService.glyphOf(root.moduleId)
             font.family: Theme.fontMono
             font.pixelSize: root.size

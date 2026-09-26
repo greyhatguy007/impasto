@@ -40,7 +40,6 @@ Item {
         coding: codingModule,
         stats: statsModule,
         updates: updatesModule,
-        pet: petModule,
         games: gamesModule,
         lyrics: lyricsModule,
         notes: notesModule,
@@ -73,7 +72,6 @@ Item {
     Component { id: codingModule;     CodingModule {} }
     Component { id: statsModule;      StatsModule { compact: root.compact } }
     Component { id: updatesModule;    UpdatesModule {} }
-    Component { id: petModule;        PetModule { compact: root.compact } }
     Component { id: gamesModule;      GamesModule {} }
     Component { id: lyricsModule;     LyricsModule {} }
     Component { id: notesModule;      NotesModule {} }

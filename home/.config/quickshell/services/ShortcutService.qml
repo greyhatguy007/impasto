@@ -43,7 +43,6 @@ Singleton {
         { name: "stats",          label: "System statistics",    description: "Shell · Open system statistics" },
         { name: "session",        label: "Session menu",         description: "Session · Session menu" },
         { name: "lock",           label: "Lock the screen",      description: "Session · Lock the screen" },
-        { name: "pet",            label: "Pet",                  description: "Shell · Open the pet" },
         { name: "games",          label: "Games",                description: "Shell · Open the games" },
         { name: "notes",          label: "Notes",                description: "Shell · Open the notes" },
         { name: "board",          label: "Task board",           description: "Shell · Open the task board" },

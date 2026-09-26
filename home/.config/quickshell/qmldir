@@ -35,7 +35,6 @@ singleton BluetoothService   1.0 services/BluetoothService.qml
 singleton KdeConnectService  1.0 services/KdeConnectService.qml
 singleton AiUsageService     1.0 services/AiUsageService.qml
 singleton UpdatesService     1.0 services/UpdatesService.qml
-singleton PetService         1.0 services/PetService.qml
 singleton ModuleService      1.0 services/ModuleService.qml
 singleton ShortcutService    1.0 services/ShortcutService.qml
 singleton AccountService     1.0 services/AccountService.qml
@@ -74,9 +73,6 @@ Spectrum         1.0 components/Spectrum.qml
 NotchFillet      1.0 components/NotchFillet.qml
 AiMark           1.0 components/AiMark.qml
 PaletteBoard     1.0 components/PaletteBoard.qml
-PetFace          1.0 components/PetFace.qml
-PetFamily        1.0 components/PetFamily.qml
-PetShelf         1.0 components/PetShelf.qml
 UsageBar         1.0 components/UsageBar.qml
 Figure           1.0 components/Figure.qml
 Stepper          1.0 components/Stepper.qml
@@ -142,7 +138,6 @@ BluetoothModule  1.0 bar/modules/BluetoothModule.qml
 WeatherModule    1.0 bar/modules/WeatherModule.qml
 StatsModule      1.0 bar/modules/StatsModule.qml
 UpdatesModule    1.0 bar/modules/UpdatesModule.qml
-PetModule        1.0 bar/modules/PetModule.qml
 GamesModule      1.0 bar/modules/GamesModule.qml
 NotesModule      1.0 bar/modules/NotesModule.qml
 NotificationsModule 1.0 bar/modules/NotificationsModule.qml
@@ -174,7 +169,6 @@ CalendarCard     1.0 bar/island/controls/CalendarCard.qml
 LockScreen       1.0 lock/LockScreen.qml
 LockSurface      1.0 lock/LockSurface.qml
 SessionPanel     1.0 bar/island/SessionPanel.qml
-PetPanel         1.0 bar/island/PetPanel.qml
 GamesPanel       1.0 bar/island/GamesPanel.qml
 NotesPanel       1.0 bar/island/NotesPanel.qml
 BoardPanel       1.0 bar/island/BoardPanel.qml
@@ -189,7 +183,6 @@ Block            1.0 bar/island/controls/Block.qml
 BlockFace        1.0 bar/island/controls/BlockFace.qml
 TogglesBlock     1.0 bar/island/controls/TogglesBlock.qml
 ImpastoBlock     1.0 bar/island/controls/ImpastoBlock.qml
-PetBlock         1.0 bar/island/controls/PetBlock.qml
 ClockBlock       1.0 bar/island/controls/ClockBlock.qml
 GamesBlock       1.0 bar/island/controls/GamesBlock.qml
 ControlsTray     1.0 bar/island/controls/ControlsTray.qml

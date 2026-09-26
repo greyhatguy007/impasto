@@ -129,13 +129,6 @@
         "key": "clock-2-2"
       },
       {
-        "id": "pet",
-        "col": 2,
-        "row": 4,
-        "size": "2x2",
-        "key": "pet-2-4"
-      },
-      {
         "id": "tasks",
         "col": 2,
         "row": 6,
@@ -242,7 +235,6 @@
       "Shell · Open appearance": "SUPER + T",
       "Shell · Open the palette": "SUPER + SHIFT + T",
       "Shell · Open system statistics": "SUPER + U",
-      "Shell · Open the pet": "SUPER + SHIFT + P",
       "Shell · Open the games": "SUPER + G",
       "Shell · Open the notes": "SUPER + S",
       "Shell · Open the task board": "SUPER + K",

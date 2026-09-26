@@ -52,7 +52,6 @@ Singleton {
         { id: "coding",        name: "Activity",      bar: true,  width: 380, height: 158 },
         { id: "stats",         name: "System",        bar: true,  width: 380, height: 148 },
         { id: "updates",       name: "Updates",       bar: true,  width: 356, height: 132 },
-        { id: "pet",           name: "Pet",           bar: true,  width: 380, height: 172 },
         { id: "games",         name: "Games",         bar: false, width: 380, height: 150 },
         { id: "calendar",      name: "Calendar",      bar: true,  width: 340, height: 330 },
         { id: "notes",         name: "Notes",         bar: false, width: 356, height: 150 },
@@ -72,7 +71,7 @@ Singleton {
     //
     // Every door of the control centre can go on the bar, under its name and
     // glyph, and so can the control centre itself and the capture surface.
-    // Not the statistics or the pet: on the bar those are modules, and a
+    // Not the statistics: on the bar those are modules, and a
     // button beside them would be the same piece without its figure. Alone in
     // a capsule, a button is drawn as a circle.
     //
@@ -178,7 +177,7 @@ Singleton {
     // A state or a count (the network, the bell, the date, the pending
     // updates) has nothing to fill, so it keeps its symbol in either shape.
     readonly property var ringed: ["media", "timer", "ai", "phone", "battery",
-        "volume", "brightness", "stats", "pet", "bluetooth"]
+        "volume", "brightness", "stats", "bluetooth"]
 
     // A piece's own shape when it has one, the bar's when it does not.
     function shapeOf(id: string, own: var): string {
@@ -193,7 +192,7 @@ Singleton {
     // ── GLYPH AND FIGURE ────────────────────────────────────────────────────
     //
     // One table for every place a module's symbol and figure appear (bar,
-    // glance, settings), in either chip shape. The assistant and the pet draw their
+    // glance, settings), in either chip shape. The assistant draws its
     // own mark instead of a glyph (`ChipFace`).
     function glyphOf(id: string): string {
         switch (id) {
@@ -277,8 +276,6 @@ Singleton {
             return KdeConnectService.name
         case "stats":
             return `${StatsService.cpu.toFixed(0)}%`
-        case "pet":
-            return PetService.hatched ? `Lv ${PetService.level}` : "Egg"
         case "network":
             return NetworkService.connectionName
         case "bluetooth":
@@ -503,10 +500,6 @@ Singleton {
         case "updates":
             // False on a machine with neither checkupdates nor pacman.
             return UpdatesService.available
-        case "pet":
-            // `ready` is constant true; reading it builds the service, and
-            // the service's trickle runs while the pet is on the bar.
-            return PetService.ready
         case "games":
             return GamesService.ready
         case "notes":
