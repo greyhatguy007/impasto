@@ -35,6 +35,19 @@ SettingsSection {
     // hotplug reorders points at a different screen afterwards.
     property string chosen: ""
 
+    // What the running session was opened with, from `env.lua`; it can differ
+    // from the choice until the next login.
+    readonly property string sessionGraphics: {
+        switch (GpuService.sessionMode) {
+        case "hybrid":
+            return Tr.t("The integrated card, with the discrete one for single applications")
+        case "nvidia":
+            return Tr.t("The discrete card")
+        default:
+            return Tr.t("The integrated card")
+        }
+    }
+
     // Defaults to the primary screen rather than the first one enumerated.
     readonly property var current: {
         const found = root.monitors.find(m => m.description === root.chosen)
@@ -558,6 +571,160 @@ SettingsSection {
             reason: Tr.t("Needs hyprsunset, which is not installed")
             onMoved: value => SettingsService.set(
                 "nightTemperature", Math.round(value / 100) * 100)
+        }
+    }
+
+
+    // ── GRAPHICS ────────────────────────────────────────────────────────────
+    //
+    // Which card renders the session. `GpuService` holds the choice and writes
+    // it for `env.lua`; it takes effect at the next login, since Aquamarine
+    // opens the DRM cards once. The tile for a card the machine does not have
+    // is left dimmed rather than hidden, so the choice reads the same either
+    // way.
+
+    ColumnLayout {
+        Layout.fillWidth: true
+        spacing: root.spacing
+        visible: root.tab === "graphics"
+
+        SettingGroup {
+            title: Tr.t("Graphics")
+            note: Tr.t("Which card does the drawing.")
+            hint: Tr.t("The integrated card draws the desktop and the discrete one sleeps. Hybrid keeps that, and lets a single application be started on the discrete card. The discrete card can also draw the whole session; the picture is then presented through the integrated card, since that is where the screen is plugged in. A change applies at the next login: the cards are opened once, when the session starts.")
+
+            SettingTiles {
+                label: Tr.t("Rendering")
+                reading: SettingsService.gpuMode === "igpu"
+                    ? Tr.t("The integrated card, and the discrete one idle")
+                    : (SettingsService.gpuMode === "hybrid"
+                        ? Tr.t("The integrated card, with the discrete one for single applications")
+                        : Tr.t("The discrete card draws everything"))
+                locked: !GpuService.available
+                reason: Tr.t("No discrete graphics card on this machine")
+
+                PreviewTile {
+                    id: tileIntegrated
+
+                    caption: Tr.t("Integrated")
+                    selected: SettingsService.gpuMode === "igpu"
+                    onPicked: SettingsService.set("gpuMode", "igpu")
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 7
+
+                        Rectangle {
+                            width: 16
+                            height: 16
+                            radius: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Theme.accent
+                        }
+
+                        Rectangle {
+                            width: 16
+                            height: 16
+                            radius: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Theme.islandBorder
+                        }
+                    }
+                }
+
+                PreviewTile {
+                    caption: Tr.t("Hybrid")
+                    selected: SettingsService.gpuMode === "hybrid"
+                    onPicked: SettingsService.set("gpuMode", "hybrid")
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 7
+
+                        Rectangle {
+                            width: 16
+                            height: 16
+                            radius: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Theme.accent
+                        }
+
+                        Rectangle {
+                            width: 16
+                            height: 16
+                            radius: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Theme.accent
+                        }
+                    }
+                }
+
+                PreviewTile {
+                    caption: Tr.t("Discrete")
+                    selected: SettingsService.gpuMode === "nvidia"
+                    onPicked: SettingsService.set("gpuMode", "nvidia")
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 7
+
+                        Rectangle {
+                            width: 16
+                            height: 16
+                            radius: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Theme.islandBorder
+                        }
+
+                        Rectangle {
+                            width: 16
+                            height: 16
+                            radius: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Theme.accent
+                        }
+                    }
+                }
+            }
+        }
+
+        SettingGroup {
+            visible: GpuService.available
+            title: Tr.t("The discrete card")
+            note: Tr.t("What is running the desktop, and what is waiting.")
+            hint: Tr.t("One program can be started on the discrete card with 'gpu.py offload <command>', which sets the PRIME render-offload variables. That reaches Vulkan, and OpenGL through Xwayland or GLX; a Wayland-native OpenGL client may stay on the integrated card.")
+
+            SettingRow {
+                label: Tr.t("Applied")
+                reading: GpuService.pending
+                    ? Tr.t("Waiting for the next login")
+                    : Tr.t("In use by this session")
+
+                PillButton {
+                    visible: GpuService.pending
+                    text: Tr.t("Log out")
+                    onClicked: SessionService.run("logout")
+                }
+
+                Text {
+                    visible: !GpuService.pending
+                    text: "󰄬"
+                    font.family: Theme.fontMono
+                    font.pixelSize: 15
+                    color: Theme.accent
+                }
+            }
+
+            SettingRow {
+                label: Tr.t("The card drawing now")
+                reading: root.sessionGraphics
+            }
         }
     }
 }

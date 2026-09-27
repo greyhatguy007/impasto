@@ -90,12 +90,13 @@ Item {
           page: appearancePage },
 
         { id: "monitors", category: "desk", icon: "󰍹", label: Tr.t("Displays"),
-          blurb: Tr.t("Screen layout, modes and the laptop lid."),
+          blurb: Tr.t("Screen layout, modes, the graphics cards and the laptop lid."),
           tabs: [{ id: "arrangement", label: Tr.t("Arrangement") },
                  { id: "screen", label: Tr.t("The screen") },
+                 { id: "graphics", label: Tr.t("Graphics") },
                  { id: "lid", label: Tr.t("The lid") },
                  { id: "night", label: Tr.t("Night light") }],
-          keywords: "displays monitor screen resolution refresh scale rotate transform vrr mirror extend primary night light blue filter warm temperature gamma hyprsunset lid clamshell laptop close workspaces",
+          keywords: "displays monitor screen resolution refresh scale rotate transform vrr mirror extend primary night light blue filter warm temperature gamma hyprsunset lid clamshell laptop close workspaces graphics gpu card nvidia amd intel discrete integrated hybrid prime offload render acceleration",
           page: monitorsPage },
 
         { id: "input", category: "desk", icon: "󰍽", label: Tr.t("Input"),
@@ -161,6 +162,7 @@ Item {
         "monitors": "shell/displays/",
         "monitors/arrangement": "shell/displays/#arrangement",
         "monitors/screen": "shell/displays/#the-screen",
+        "monitors/graphics": "shell/displays/",
         "monitors/lid": "shell/displays/#the-lid",
         "monitors/night": "shell/displays/#night-light",
         "input": "shell/settings/#the-pages",

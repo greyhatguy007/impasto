@@ -14,6 +14,7 @@ singleton LauncherService    1.0 services/LauncherService.qml
 singleton SystemService      1.0 services/SystemService.qml
 singleton HyprlandService    1.0 services/HyprlandService.qml
 singleton MonitorService     1.0 services/MonitorService.qml
+singleton GpuService        1.0 services/GpuService.qml
 singleton AudioService       1.0 services/AudioService.qml
 singleton BatteryService     1.0 services/BatteryService.qml
 singleton BrightnessService  1.0 services/BrightnessService.qml

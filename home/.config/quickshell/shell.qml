@@ -39,6 +39,8 @@ ShellRoot {
         void CompositorService.animationPreset
         // Re-applies the monitor arrangement kept for this set of screens.
         void MonitorService.loaded
+        // Writes the chosen graphics mode to gpu.tsv for env.lua.
+        void GpuService.available
         // Writes the profile's keys to keys.tsv for keybinds.lua.
         void ShortcutService.catalogue
         // Reads the user's name and face ahead of the first lock.

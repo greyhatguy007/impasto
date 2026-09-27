@@ -66,6 +66,18 @@ bind(mainMod .. " + E",      hl.dsp.exec_cmd(apps.file_manager), { description =
 bind(mainMod .. " + B",      hl.dsp.exec_cmd(apps.browser),      { description = "Applications · Open the browser" })
 
 
+-- ── GRAPHICS ────────────────────────────────────────────────────────────────
+
+-- · one program on the discrete card (the other half of the mode in
+-- · Settings → Displays). PRIME render offload reaches Vulkan, and OpenGL
+-- · through Xwayland or GLX; a Wayland-native OpenGL client may stay on the
+-- · integrated card.
+local gpu = os.getenv("HOME") .. "/.config/quickshell/scripts/gpu.py"
+
+bind(mainMod .. " + SHIFT + Return", hl.dsp.exec_cmd(gpu .. " offload " .. apps.terminal),
+     { description = "Graphics · Open a terminal on the discrete card" })
+
+
 -- ── WINDOWS ─────────────────────────────────────────────────────────────────
 
 -- · floating size

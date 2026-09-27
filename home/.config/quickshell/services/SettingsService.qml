@@ -131,6 +131,7 @@ Singleton {
     readonly property alias compositor: config.compositor
     readonly property alias keyboard: config.keyboard
     readonly property alias displays: config.displays
+    readonly property alias gpuMode: config.gpuMode
     readonly property alias keys: config.keys
     readonly property alias launcherPrefixes: config.launcherPrefixes
     readonly property alias cursorColor: config.cursorColor
@@ -314,7 +315,7 @@ Singleton {
     // the person: kept across switches, left out of exports and untouched by
     // Reset. The recorder and capture entries are last-used state.
     readonly property var machineKeys: [
-        "displays", "lidPolicy",
+        "displays", "lidPolicy", "gpuMode",
         "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
         "leetcodeUser", "codeforcesUser", "gitlabUser",
         "vikunjaUrl", "vikunjaToken", "vikunjaProject", "obsidianVaultPath",
@@ -682,6 +683,14 @@ Singleton {
         //
         // Fields are defined by `monitors.py`.
         property var displays: ({})
+
+        // Which card the session renders on: "igpu" (the desktop on the
+        // integrated card, the discrete one idle), "hybrid" (the same, with
+        // the discrete card reachable for single applications) or "nvidia"
+        // (the discrete card renders the whole session). `GpuService` resolves
+        // it into `gpu.tsv`, which `hypr/modules/env.lua` reads when the
+        // session starts, so a change applies on the next login.
+        property string gpuMode: "igpu"
 
         // ── KEYS ────────────────────────────────────────────────────────
         //
