@@ -94,13 +94,26 @@ Item {
 
         Text {
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - tick.width - 8 - (day.visible ? day.width + 8 : 0)
+            width: parent.width - tick.width - 8 - (span.visible ? span.width + 8 : 0)
+                - (day.visible ? day.width + 8 : 0)
             text: root.task ? root.task.text : ""
             elide: Text.ElideRight
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
             font.strikeout: root.done
             color: root.done ? root.ink.muted : root.ink.text
+        }
+
+        // The repeat mark, before the day, for a task that comes back.
+        Text {
+            id: span
+
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.task && (root.task.repeat ?? "") !== ""
+            text: "󰑖"
+            font.family: Theme.fontMono
+            font.pixelSize: Theme.fontSizeLabel
+            color: root.ink.muted
         }
 
         Text {

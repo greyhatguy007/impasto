@@ -53,6 +53,11 @@ HEADING = re.compile(r"^##\s+(.*?)\s*$")
 CARD = re.compile(r"^- \[([ xX])\]\s?(.*)$")
 KEY = re.compile(r"^\s*<!--\s*impasto:([A-Za-z0-9_.-]+)\s*-->\s*$")
 DUE = re.compile(r"@\{(\d{4}-\d{2}-\d{2})\}")
+# How often a card comes back, written where Obsidian shows it (and can edit
+# it): a tag after the due date. Removed from the text on the way in, put back
+# on the way out, so it neither clutters the shell's line nor is lost.
+REPEAT = re.compile(r"(?:\s+)?#repeat/(daily|weekly|monthly)\b")
+REPEATS = {"daily", "weekly", "monthly"}
 SETTINGS = re.compile(r"^%%\s*kanban:settings")
 
 SKELETON = """---
@@ -230,6 +235,11 @@ def _parse_card(block):
     if found:
         due = found.group(1)
         raw = raw[:found.start()] + raw[found.end():]
+    repeat = ""
+    found = REPEAT.search(raw)
+    if found:
+        repeat = found.group(1)
+        raw = raw[:found.start()] + raw[found.end():]
     text = raw.strip()
 
     key = ""
@@ -241,7 +251,7 @@ def _parse_card(block):
             continue
         body.append(_unindent(following))
     return {"key": key, "text": text, "body": "\n".join(body).rstrip(),
-            "due": due, "done": done}
+            "due": due, "repeat": repeat, "done": done}
 
 
 def _unindent(line):
@@ -280,6 +290,8 @@ def render_card(card):
     line = f"- [{mark}] {card.get('text', '')}"
     if card.get("due"):
         line += f" @{{{card['due']}}}"
+    if card.get("repeat"):
+        line += f" #repeat/{card['repeat']}"
     out = [line]
     if card.get("key"):
         out.append(f"\t<!-- impasto:{card['key']} -->")
@@ -412,9 +424,16 @@ def reduce_task(card, lane):
         "body": card.get("body", ""),
         "state": lane["id"],
         "due": card.get("due", ""),
+        "repeat": card.get("repeat", ""),
         "rank": card.get("rank", 0),
         "done": bool(card.get("done")),
     }
+
+
+def normalize_repeat(value):
+    """One of the three frequencies, or "" for a one-off."""
+    word = str(value or "").strip().lower()
+    return word if word in REPEATS else ""
 
 
 def payload_fields(payload):
@@ -426,6 +445,8 @@ def payload_fields(payload):
         fields["body"] = str(payload["body"])
     if "due" in payload:
         fields["due"] = str(payload["due"] or "")[:10]
+    if "repeat" in payload:
+        fields["repeat"] = normalize_repeat(payload["repeat"])
     if "done" in payload:
         fields["done"] = bool(payload["done"])
     return fields
@@ -481,6 +502,7 @@ def run_create(path, payload):
     card = {"key": key, "text": str(payload.get("text") or ""),
             "body": str(payload.get("body") or ""),
             "due": str(payload.get("due") or "")[:10],
+            "repeat": normalize_repeat(payload.get("repeat")),
             "done": bool(payload.get("done")), "rank": 0}
     insert_card(lane, card)
     write_board(path, serialise(document))
@@ -566,7 +588,7 @@ kanban-plugin: board
 
 ## To do
 
-- [ ] Pay rent @{2026-10-01}
+- [ ] Pay rent @{2026-10-01} #repeat/monthly
 \t<!-- impasto:task-one -->
 \tRent is due on the first.
 
@@ -592,9 +614,12 @@ kanban-plugin: board
     assert set(cards) == {"task-one", "task-old"}, cards
     assert cards["task-one"][0] == "todo", cards["task-one"]
     assert cards["task-one"][1]["due"] == "2026-10-01", cards["task-one"]
+    assert cards["task-one"][1]["repeat"] == "monthly", cards["task-one"]
+    assert cards["task-one"][1]["text"] == "Pay rent", cards["task-one"]
     assert cards["task-one"][1]["body"] == "Rent is due on the first.", cards["task-one"]
     assert cards["task-old"][1]["done"] is True, cards["task-old"]
     assert "kanban:settings" in serialise(document)
+    assert "#repeat/monthly" in serialise(document)
 
     # An unknown lane survives a round trip exactly.
     again = serialise(document)
@@ -612,13 +637,21 @@ kanban-plugin: board
         path = os.path.join(vault, "Tasks.md")
 
         made = run_create(path, {"key": "task-two", "text": "Write docs",
-                                 "body": "A body", "due": "2026-11-01", "lane": "doing"})
+                                 "body": "A body", "due": "2026-11-01",
+                                 "repeat": "weekly", "lane": "doing"})
         assert made["task"]["state"] == "doing", made
         assert made["task"]["due"] == "2026-11-01", made
+        assert made["task"]["repeat"] == "weekly", made
         assert os.path.isfile(path)
 
         listed = run_tasks(path)["tasks"]
         assert [task["key"] for task in listed] == ["task-two"], listed
+        assert listed[0]["repeat"] == "weekly", listed
+
+        # The tag survives a round trip and leaves the text alone.
+        with open(path, encoding="utf-8") as handle:
+            written = handle.read()
+        assert "Write docs @{2026-11-01} #repeat/weekly" in written, written
 
         moved = run_update(path, "task-two", {"text": "Write the docs",
                                               "done": True, "lane": "done", "index": 0})

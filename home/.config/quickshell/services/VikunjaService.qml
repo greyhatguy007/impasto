@@ -212,6 +212,7 @@ Singleton {
             title: task.text ?? "",
             description: task.body ?? "",
             due: task.due ?? "",
+            repeat: task.repeat ?? "",
             done: task.state === "done"
         })
     }

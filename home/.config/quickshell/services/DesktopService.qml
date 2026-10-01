@@ -193,15 +193,18 @@ Singleton {
     //
     // A row carries its screen as the monitor's description, the name
     // `displays` uses, so moving a cable keeps it. A row without one — every
-    // row written before there was more than one board — is on the primary,
-    // and so is a row whose screen is not plugged in, which is what stops a
-    // widget disappearing with a monitor.
+    // row written before there was more than one board — is on the primary.
+    // Rows assigned to a known disabled monitor stay assigned there and are
+    // hidden until that screen returns. Folding them onto the primary would
+    // make the collision resolver reshuffle visible widgets when a lid closes.
     function nameOf(widget: var): string {
         const description = widget && typeof widget.screen === "string" ? widget.screen : ""
         if (description !== "") {
             const monitor = MonitorService.monitorFor(description)
             if (monitor && !monitor.disabled)
                 return monitor.name
+            if (monitor && monitor.disabled)
+                return ""
         }
         return MonitorService.effectivePrimaryName
     }

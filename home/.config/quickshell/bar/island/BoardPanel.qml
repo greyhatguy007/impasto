@@ -498,6 +498,16 @@ FocusScope {
                                                 font.pixelSize: Theme.fontSizeLabel
                                                 color: card.overdue ? Theme.red : Theme.textMuted
                                             }
+
+                                            // How often it comes back.
+                                            Text {
+                                                visible: (card.task.repeat ?? "") !== ""
+                                                text: `󰑖 ${card.task.repeat === "custom"
+                                                    ? Tr.t("Repeats") : card.task.repeat}`
+                                                font.family: Theme.fontMono
+                                                font.pixelSize: Theme.fontSizeLabel
+                                                color: Theme.textMuted
+                                            }
                                         }
 
                                         // A task on a server, and a card whose
@@ -637,9 +647,26 @@ FocusScope {
 
             readonly property string key: root.opened
             readonly property string due: root.task ? root.task.due : ""
+            readonly property string repeat: root.task ? (root.task.repeat ?? "") : ""
+
+            // What the repeat button reads: the frequency, or the invitation.
+            readonly property string repeatLabel: {
+                if (sheet.repeat === "daily")
+                    return Tr.t("Daily")
+                if (sheet.repeat === "weekly")
+                    return Tr.t("Weekly")
+                if (sheet.repeat === "monthly")
+                    return Tr.t("Monthly")
+                if (sheet.repeat === "custom")
+                    return Tr.t("Repeats")
+                return Tr.t("Repeat")
+            }
 
             // Whether the month is open over the day's button.
             property bool picking: false
+
+            // Whether the frequency menu is open over the repeat button.
+            property bool repeating: false
 
             // Read from the service, not `root.task`: this runs inside the
             // change that built the sheet, before the binding re-evaluates.
@@ -655,6 +682,18 @@ FocusScope {
             function pick(day: string): void {
                 TasksService.setDue(sheet.key, day)
                 sheet.picking = false
+                line.forceActiveFocus()
+            }
+
+            function setRepeat(freq: string): void {
+                TasksService.update(sheet.key, { repeat: freq })
+                sheet.repeating = false
+                line.forceActiveFocus()
+            }
+
+            function dismiss(): void {
+                sheet.picking = false
+                sheet.repeating = false
                 line.forceActiveFocus()
             }
 
@@ -785,8 +824,25 @@ FocusScope {
                         text: sheet.due !== "" ? TasksService.dueLabel(sheet.due) : "Pick a day"
                         active: sheet.picking
                         onClicked: {
+                            sheet.repeating = false
                             sheet.picking = !sheet.picking
                             if (!sheet.picking)
+                                line.forceActiveFocus()
+                        }
+                    }
+
+                    // How often the task comes back. A finished one is cloned
+                    // into `todo` for the next occurrence.
+                    PillButton {
+                        id: repeatButton
+
+                        icon: "󰑖"
+                        text: sheet.repeatLabel
+                        active: sheet.repeating || sheet.repeat !== ""
+                        onClicked: {
+                            sheet.picking = false
+                            sheet.repeating = !sheet.repeating
+                            if (!sheet.repeating)
                                 line.forceActiveFocus()
                         }
                     }
@@ -819,12 +875,9 @@ FocusScope {
             // rather than the task.
             MouseArea {
                 anchors.fill: parent
-                visible: sheet.picking
+                visible: sheet.picking || sheet.repeating
                 z: 5
-                onPressed: {
-                    sheet.picking = false
-                    line.forceActiveFocus()
-                }
+                onPressed: sheet.dismiss()
             }
 
             Loader {
@@ -867,6 +920,47 @@ FocusScope {
                     NumberAnimation { target: month; property: "opacity"; from: 0; to: 1; duration: Theme.durationFast; easing.type: Theme.easing }
                     NumberAnimation { target: grow; property: "yScale"; from: 0.94; to: 1; duration: Theme.durationFast; easing.type: Theme.easing }
                     NumberAnimation { target: grow; property: "xScale"; from: 0.98; to: 1; duration: Theme.durationFast; easing.type: Theme.easing }
+                }
+            }
+
+            // ── REPEAT ──────────────────────────────────────────────────
+
+            // The frequency menu, over the repeat button: daily, weekly,
+            // monthly, or not at all. A click outside dismisses it.
+            Loader {
+                id: repeatMenu
+
+                z: 6
+                active: sheet.repeating
+                sourceComponent: Rectangle {
+                    implicitWidth: choice.implicitWidth + 16
+                    implicitHeight: choice.implicitHeight + 12
+                    radius: Theme.radiusMedium
+                    color: Theme.island
+                    border.color: Theme.islandBorder
+                    border.width: 1
+
+                    SegmentedControl {
+                        id: choice
+                        anchors.centerIn: parent
+                        options: [
+                            { id: "", label: Tr.t("Never") },
+                            { id: "daily", label: Tr.t("Daily") },
+                            { id: "weekly", label: Tr.t("Weekly") },
+                            { id: "monthly", label: Tr.t("Monthly") }
+                        ]
+                        current: sheet.repeat
+                        onSelected: id => sheet.setRepeat(id)
+                    }
+                }
+
+                // Flush with the button's left edge, above it, once it has a
+                // size.
+                onLoaded: {
+                    const plate = repeatMenu.item as Item
+                    const at = repeatButton.mapToItem(sheet, 0, 0)
+                    repeatMenu.x = at.x
+                    repeatMenu.y = at.y - plate.height - 8
                 }
             }
         }

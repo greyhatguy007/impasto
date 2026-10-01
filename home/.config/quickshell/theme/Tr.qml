@@ -956,6 +956,11 @@ QtObject {
             "open": "abiertas",
             "due today": "para hoy",
             "overdue": "atrasadas",
+            "Repeat": "Repetir",
+            "Repeats": "Se repite",
+            "Daily": "Diario",
+            "Weekly": "Semanal",
+            "Monthly": "Mensual",
 
             // ── INTEGRATIONS · ASSISTANT USAGE ────────────────────────────────
             "Assistant usage": "Uso del asistente",

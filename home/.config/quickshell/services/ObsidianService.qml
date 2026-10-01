@@ -200,6 +200,7 @@ Singleton {
             text: task.text ?? "",
             body: task.body ?? "",
             due: task.due ?? "",
+            repeat: task.repeat ?? "",
             done: task.state === "done",
             lane: task.state,
             index: index ?? 0

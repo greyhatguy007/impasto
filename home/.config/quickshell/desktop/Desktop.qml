@@ -91,7 +91,24 @@ PanelWindow {
         // Defensive: both lists are read while the singletons are still
         // being built, and one of them is briefly undefined.
         windows: (DesktopService.windows ?? []).concat(DeckService.windows ?? [])
-        onCleared: DesktopService.edit(false)
+        onCleared: {
+            if (!DesktopService.editing)
+                return
+            // Closing the lid can destroy the surface that owns the grab.
+            // Keep arranging on the surviving primary instead of treating
+            // that output removal like an ordinary focus loss.
+            const hostExists = Quickshell.screens.some(
+                screen => screen.name === DesktopService.editingScreen)
+            if (!hostExists && MonitorService.effectivePrimaryName !== "") {
+                DesktopService.editingScreen = MonitorService.effectivePrimaryName
+                DesktopService.galleryScreen = MonitorService.effectivePrimaryName
+                DesktopService.selected = ""
+                DesktopService.dragging = ""
+                DesktopService.landing = null
+                return
+            }
+            DesktopService.edit(false)
+        }
     }
 
     Component.onCompleted: DesktopService.publish(root.screenName, root)

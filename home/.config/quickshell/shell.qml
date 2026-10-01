@@ -77,6 +77,13 @@ ShellRoot {
     // The primary is the fallback.
     property string islandName: MonitorService.effectivePrimaryName
 
+    // A mirrored pair is one logical desktop. Keep only the configured
+    // primary's widget surfaces alive; separate layer surfaces on mirrored
+    // outputs overlap and can steal pointer input or clear the edit focus grab.
+    readonly property var desktopScreens: MonitorService.mirroring
+        ? (MonitorService.primaryScreen ? [MonitorService.primaryScreen] : [])
+        : Quickshell.screens
+
     readonly property string wantedIslandName: {
         const focused = HyprlandService.focusedMonitor
         for (const screen of Quickshell.screens)
@@ -165,7 +172,7 @@ ShellRoot {
     // Widgets under the windows, on every screen: a row carries the screen it
     // is on, and every board has a grid of its own.
     Variants {
-        model: Quickshell.screens
+        model: root.desktopScreens
 
         Desktop {
             required property var modelData
@@ -193,7 +200,7 @@ ShellRoot {
     // Notes docked on the screen edges, on every screen, for the desktop's
     // reason. A deck is a row like a widget and carries its screen too.
     Variants {
-        model: Quickshell.screens
+        model: root.desktopScreens
 
         Deck {
             required property var modelData

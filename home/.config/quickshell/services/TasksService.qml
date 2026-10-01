@@ -54,6 +54,23 @@ Singleton {
         return root.states[Math.min(root.states.length - 1, at + 1)].id
     }
 
+    // How often a task comes back, or "" for a one-off. Finishing a task with
+    // one of these leaves its struck-through self behind and puts the next
+    // occurrence at the bottom of `todo`, due one interval on from its own
+    // day (see `spawnRepeat`).
+    readonly property var repeats: ["daily", "weekly", "monthly"]
+
+    function isRepeat(freq: string): bool {
+        return root.repeats.indexOf(freq) >= 0
+    }
+
+    // A frequency the shell offers, or one only Vikunja understands ("custom":
+    // it has a recurrence rule the three choices do not name). The latter is
+    // kept as it is so an edit here does not clear it.
+    function isStoredRepeat(freq: string): bool {
+        return freq === "custom" || root.isRepeat(freq)
+    }
+
     // ── TODAY ───────────────────────────────────────────────────────────────
     //
     // Days are `yyyy-MM-dd` strings, so they compare as text.
@@ -107,6 +124,7 @@ Singleton {
     //   body      optional details, or ""
     //   state     one of `states`
     //   due       a day key, or "" for none
+    //   repeat    "" | "daily" | "weekly" | "monthly"
     //   rank      order within its column, lowest first
     //   created   ms since epoch
     //   finished  when it reached `done`, or 0
@@ -123,12 +141,15 @@ Singleton {
             const source = kept.source === "obsidian" ? "local"
                 : (kept.source === "vikunja" || kept.remote === "vikunja" ? "vikunja" : "local")
             const row = Object.assign({
-                text: "", body: "", state: "todo", due: "", rank: index, created: 0, finished: 0,
+                text: "", body: "", state: "todo", due: "", repeat: "",
+                rank: index, created: 0, finished: 0,
                 remote: source === "local" ? "" : source, remoteId: 0, project: 0,
                 dirty: false, tries: 0, saved: source === "local"
             }, kept, { source: source })
             if (!root.states.some(item => item.id === row.state))
                 row.state = "todo"
+            if (!root.isStoredRepeat(row.repeat))
+                row.repeat = ""
             if (row.remote === "")
                 row.remote = source === "local" ? "" : source
             row.remoteId = Number(row.remoteId) || 0
@@ -284,6 +305,7 @@ Singleton {
             body: task.description ?? "",
             state: task.done ? "done" : "todo",
             due: task.due ?? "",
+            repeat: root.isStoredRepeat(task.repeat) ? task.repeat : "",
             rank: rank,
             created: task.created ? Date.parse(task.created) : 0,
             finished: task.done
@@ -308,6 +330,9 @@ Singleton {
             text: task.title ?? row.text,
             body: task.description ?? row.body,
             due: task.due ?? "",
+            // The server owns recurrence: it re-opens and bumps the task when
+            // it is done, so what it says here is what happened.
+            repeat: root.isStoredRepeat(task.repeat) ? task.repeat : "",
             state: done ? "done" : (row.state === "done" ? "todo" : row.state),
             finished: done
                 ? (row.finished || (task.doneAt ? Date.parse(task.doneAt) : Date.now())) : 0,
@@ -477,6 +502,7 @@ Singleton {
             body: task.body ?? "",
             state: root.states.some(item => item.id === task.state) ? task.state : "todo",
             due: task.due ?? "",
+            repeat: root.isRepeat(task.repeat) ? task.repeat : "",
             rank: Number(task.rank) || 0,
             created: 0,
             finished: task.done ? Date.now() : 0,
@@ -736,6 +762,45 @@ Singleton {
         return key
     }
 
+    // The day one interval on from `day`. Monthly keeps the day of the month,
+    // pulled back to the last one when the month is shorter (the 31st comes
+    // back on the 30th, then the 31st again).
+    function nextDue(day: string, freq: string): string {
+        const date = root.dateOf(day)
+        if (!date || !root.isRepeat(freq))
+            return day
+        if (freq === "daily")
+            date.setDate(date.getDate() + 1)
+        else if (freq === "weekly")
+            date.setDate(date.getDate() + 7)
+        else {
+            const wanted = date.getDate()
+            date.setDate(1)
+            date.setMonth(date.getMonth() + 1)
+            const last = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+            date.setDate(Math.min(wanted, last))
+        }
+        return root.dayKey(date)
+    }
+
+    // A finished repeating task's next occurrence, at the bottom of `todo`.
+    // Anchored on the task's own day, so a task ticked late still lands on its
+    // proper day; one with no day is anchored on today.
+    //
+    // Vikunja does this itself, natively: marking a repeating task done
+    // re-opens it server-side and bumps its due date, so a clone here would
+    // duplicate it. The next read brings the moved task back.
+    function spawnRepeat(task: var): void {
+        if (!task || task.source === "vikunja")
+            return
+        if (!root.isRepeat(task.repeat) || (task.text ?? "").trim() === "")
+            return
+        const anchor = task.due !== "" ? task.due : root.todayKey
+        const key = root.add(task.text, root.nextDue(anchor, task.repeat), "todo", task.body ?? "")
+        if (key !== "")
+            root.update(key, { repeat: task.repeat })
+    }
+
     function lastRank(state: string): int {
         const column = root.inState(state)
         return column.length === 0 ? 0 : column[column.length - 1].rank + 1
@@ -753,6 +818,7 @@ Singleton {
             body: body ?? "",
             state: chosen,
             due: due ?? "",
+            repeat: "",
             rank: root.lastRank(chosen),
             created: Date.now(),
             finished: 0,
@@ -806,6 +872,9 @@ Singleton {
             rank: root.lastRank(state),
             finished: state === "done" ? Date.now() : 0
         })
+        // Finishing a repeating task puts the next one back in `todo`.
+        if (state === "done")
+            root.spawnRepeat(task)
     }
 
     // Re-ranks the whole column around the dropped task.

@@ -42,6 +42,14 @@ PER_PAGE = 250
 # Vikunja writes an unset date as Go's zero time.
 ZERO_DATE = "0001-01-01"
 
+# Vikunja's recurrence, from its Task model: `repeat_mode` 0 repeats after the
+# seconds in `repeat_after`, 1 repeats monthly on the same day (ignoring
+# `repeat_after`), 2 repeats from the day it was completed. Marking such a task
+# done re-opens it and bumps the date; the server does not clone it.
+REPEAT_AFTER = {"daily": 86400, "weekly": 604800}
+REPEAT_MONTHLY = 1
+REPEAT_DEFAULT = 0
+
 
 def state_directory():
     return os.path.join(
@@ -121,6 +129,29 @@ class Failure(Exception):
         self.note = note
 
 
+def repeat_of(task):
+    """The shell's frequency for a task, from Vikunja's two fields. Anything
+    that is not one of the three intervals is left without one."""
+    try:
+        mode = int(task.get("repeat_mode") or 0)
+    except (TypeError, ValueError):
+        mode = 0
+    try:
+        after = int(task.get("repeat_after") or 0)
+    except (TypeError, ValueError):
+        after = 0
+    if mode == REPEAT_MONTHLY:
+        return "monthly"
+    if mode == REPEAT_DEFAULT:
+        for word, seconds in REPEAT_AFTER.items():
+            if after == seconds:
+                return word
+        return "custom" if after > 0 else ""
+    # A rule the shell does not model ("from current date", or a mode a newer
+    # Vikunja added): named so it is not cleared, but never written back.
+    return "custom"
+
+
 def reduce_task(task):
     labels = task.get("labels") or []
     return {
@@ -129,6 +160,7 @@ def reduce_task(task):
         "description": task.get("description") or "",
         "done": bool(task.get("done")),
         "due": day_of(task.get("due_date")),
+        "repeat": repeat_of(task),
         "project": task.get("project_id") or 0,
         "labels": [label.get("title") or "" for label in labels],
         "priority": task.get("priority") or 0,
@@ -181,6 +213,21 @@ def body_from(payload):
     if "due" in payload:
         day = str(payload["due"] or "")[:10]
         body["due_date"] = f"{day}T00:00:00Z" if day else "0001-01-01T00:00:00Z"
+    if "repeat" in payload:
+        word = str(payload["repeat"] or "").strip().lower()
+        if word == "monthly":
+            body["repeat_after"] = 0
+            body["repeat_mode"] = REPEAT_MONTHLY
+        elif word in REPEAT_AFTER:
+            body["repeat_after"] = REPEAT_AFTER[word]
+            body["repeat_mode"] = REPEAT_DEFAULT
+        elif word == "custom":
+            # A rule only Vikunja understands; leave its two fields as they are.
+            pass
+        else:
+            # None: clear both, so switching a task back to one-off sticks.
+            body["repeat_after"] = 0
+            body["repeat_mode"] = REPEAT_DEFAULT
     return body
 
 

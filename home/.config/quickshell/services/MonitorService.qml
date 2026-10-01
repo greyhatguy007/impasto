@@ -159,6 +159,22 @@ Singleton {
         return rule
     }
 
+    // The lid, not the saved arrangement, decides the internal panel while
+    // the policy is "off". A profile written while the lid was shut carries
+    // `disabled: true`; with the lid open that is stale, and applying it on
+    // hotplug is what blanked the laptop panel. Handled here so the stored
+    // arrangement is left alone — a clamshell session that comes back keeps
+    // its intent.
+    function lidRule(description: string, rule: var): var {
+        if (description !== (root.internal?.description ?? ""))
+            return rule
+        if (root.lidClosed || SettingsService.lidPolicy !== "off")
+            return rule
+        if (rule.disabled !== true)
+            return rule
+        return Object.assign({}, rule, { disabled: false })
+    }
+
     // Controls only write the store; `onStoreChanged` pushes, so there is a
     // single path to the compositor.
     function remember(description: string, fields: var): void {
@@ -264,8 +280,11 @@ Singleton {
         const screens = root.arrangement?.monitors ?? ({})
         const rules = []
         for (const description in screens) {
-            const rule = root.effectiveRule(description)
-            if (!rule || !root.differs(description, rule))
+            const kept = root.effectiveRule(description)
+            if (!kept)
+                continue
+            const rule = root.lidRule(description, kept)
+            if (!root.differs(description, rule))
                 continue
             rules.push(Object.assign({}, rule, { output: `desc:${description}` }))
         }
@@ -404,6 +423,14 @@ Singleton {
     // the current profile, so later pushes agree with the lid instead of
     // undoing it. With no other screen connected nothing is done; logind
     // handles that case.
+    //
+    // The lid switch's last word, for this session. The internal's `disabled`
+    // in the stored arrangement is only ever the lid's doing, so with the lid
+    // open it is ignored on the way to the compositor (`lidRule`): a hotplug
+    // is not a lid event, and re-applying a clamshell profile must not blank
+    // the panel.
+    property bool lidClosed: false
+
     readonly property string internalName: {
         const found = root.monitors.find(monitor =>
             monitor.name.startsWith("eDP") || monitor.name.startsWith("LVDS")
@@ -415,6 +442,7 @@ Singleton {
         monitor => monitor.name === root.internalName) ?? null
 
     function lid(closed: bool): void {
+        root.lidClosed = closed
         if (!root.loaded || !root.internal)
             return
         if (SettingsService.lidPolicy === "system")
@@ -427,6 +455,21 @@ Singleton {
             return
         // Opening always lights the panel, whatever the policy.
         root.remember(root.internal.description, { disabled: closed })
+    }
+
+    // The lid's state at start, before any switch event: the first read
+    // applies the arrangement, and it must not light a shut panel. The path
+    // varies (LID, LID0, LID1), so the glob is read at once.
+    readonly property Process lidReader: Process {
+        command: ["sh", "-c", "cat /proc/acpi/button/lid/*/state 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const state = (text ?? "").toLowerCase()
+                if (state !== "")
+                    root.lidClosed = state.indexOf("closed") >= 0
+                root.load()
+            }
+        }
     }
 
     // Bringing an output up emits a burst of events. Nothing is pushed while
@@ -473,5 +516,5 @@ Singleton {
         }
     }
 
-    Component.onCompleted: root.load()
+    Component.onCompleted: root.lidReader.running = true
 }
