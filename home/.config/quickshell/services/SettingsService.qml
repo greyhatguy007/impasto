@@ -59,6 +59,7 @@ Singleton {
     readonly property alias dockAutohide: config.dockAutohide
     readonly property alias dockLauncher: config.dockLauncher
     readonly property alias weatherPlace: config.weatherPlace
+    readonly property alias wledHost: config.wledHost
     readonly property alias githubUser: config.githubUser
     readonly property alias vikunjaUrl: config.vikunjaUrl
     readonly property alias vikunjaToken: config.vikunjaToken
@@ -303,7 +304,7 @@ Singleton {
     // Reset. The recorder and capture entries are last-used state.
     readonly property var machineKeys: [
         "displays", "lidPolicy",
-        "userName", "userAvatar", "language", "keyboard", "weatherPlace", "githubUser",
+        "userName", "userAvatar", "language", "keyboard", "weatherPlace", "wledHost", "githubUser",
         "leetcodeUser", "codeforcesUser", "gitlabUser",
         "vikunjaUrl", "vikunjaToken", "vikunjaProject",
         "gcalClientId", "gcalClientSecret", "gcalCalendar",
@@ -805,6 +806,9 @@ Singleton {
 
         // Which calendar to read; `primary` is the person's own.
         property string gcalCalendar: "primary"
+
+        // WLED host address (without http://). Empty means the integration is off.
+        property string wledHost: ""
 
         // Off leaves the credentials in place but reads nothing.
         property bool gcalSync: true

@@ -55,7 +55,7 @@ view:
       children:
         - { kind: icon, glyph: "󰚥", size: 30, role: text }
         - { kind: text, text: "{brightness}", role: muted }
-        - { kind: bar, value: brightness, max: 255, grow: 1 }
+        - { kind: bar, value: brightness, max: 255, grow: 1, thickness: 4 }
 
   "4x2":
     - kind: row

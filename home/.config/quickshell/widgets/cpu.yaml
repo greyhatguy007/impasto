@@ -119,7 +119,7 @@ island:
           grow: 1
           children:
             - { kind: text, text: "Processor", role: muted }
-            - { kind: text, text: "{load:.0f}%  ·  {temp:.0f}°C", role: text, size: 24, bold: true }
+            - { kind: text, text: "{load:.0f}% · {temp:.0f}°C", role: text, size: 24, bold: true }
             - { kind: text, text: "{model}", role: muted }
             - { kind: bar, value: load, max: 100 }
             - { kind: chart, value: load, span: 90, grow: 1 }
