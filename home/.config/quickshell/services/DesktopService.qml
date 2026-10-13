@@ -125,8 +125,11 @@ Singleton {
         }
     })
 
-    // `theme` defaults to the desktop's.
+    // `theme` defaults to the desktop's. A widget defined in a file carries
+    // its own families, in either theme, so the table below never sees it.
     function familiesFor(id: string, theme = ""): var {
+        if (WidgetService.widgetOf(id) !== "")
+            return WidgetService.familiesOf(id)
         const table = root.faces[theme !== "" ? theme : SettingsService.desktopTheme]
             ?? root.faces.modern
         return table[id] ?? ["4x2"]
@@ -483,7 +486,8 @@ Singleton {
     }
 
     // Every module not marked `desk: false`, including the clock (which the
-    // bar doesn't offer). Not filtered by `ModuleService.has`.
+    // bar doesn't offer), and every widget defined in a file. Not filtered by
+    // `ModuleService.has`.
     readonly property var offerable: ModuleService.catalogue
         .filter(entry => entry.desk !== false)
 

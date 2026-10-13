@@ -1,0 +1,125 @@
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │   C P U                                                                  │
+# │   a widget defined in a file · local figures, nothing over the network   │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+#
+# Drop it on the desktop from Settings → Desktop (it is listed as "Processor",
+# under the custom widgets) at any of the four sizes, or on the bar: `island:`
+# below gives it a chip and a detail.
+#
+# Every value name a template or a `value:` uses is checked against what the
+# sources answer, so `./setup check` catches `{loda}` before the desktop does.
+
+id: cpu
+name: Processor
+
+sources:
+  # One run of the shell's own stats.py, many values out of its answer. The
+  # command is resolved beside this shell's scripts/, so `stats.py` is the one
+  # that ships with the desk and not whatever is on the path.
+  stats:
+    command: [stats.py, once]
+    every: 2s
+    parse: json
+    values:
+      model: cpu.model
+      load: cpu.total
+      temp: temperature.celsius
+      cores: cpu.cores
+      # Bytes into gibibytes, for this value only: the rest of the answer is
+      # already in the units they are shown in.
+      memory: { path: memory.used, scale: 9.3132257461547852e-10 }
+
+# Samples kept for the charts below. 2s apart, so this is five minutes of load.
+history:
+  load: 150
+
+# ── THE DESKTOP ────────────────────────────────────────────────────────────
+#
+# One list per family, from the smallest to the widest. Families left out
+# simply are not offered in Settings → Desktop for this widget.
+
+view:
+  "2x2":
+    - kind: column
+      gap: 2
+      align: center
+      grow: 1
+      children:
+        - { kind: text, text: "{load:.0f}%", role: text, size: 38, bold: true }
+        - { kind: text, text: "processor", role: muted }
+
+  "4x2":
+    - kind: row
+      gap: 12
+      grow: 1
+      children:
+        - kind: column
+          gap: 2
+          children:
+            - { kind: text, text: "{load:.0f}%", role: text, size: 30, bold: true }
+            - { kind: text, text: "processor", role: muted }
+        - { kind: gauge, value: load, max: 100, grow: 1 }
+        - kind: column
+          gap: 2
+          align: end
+          children:
+            - { kind: text, text: "{temp:.0f}°C", role: text }
+            - { kind: text, text: "{memory:.1f} GB", role: muted }
+
+  "4x4":
+    - kind: column
+      gap: 12
+      grow: 1
+      children:
+        - kind: row
+          gap: 10
+          children:
+            - { kind: icon, glyph: "󰻠", size: 22, role: accent }
+            - { kind: text, text: "{load:.0f}%", role: text, size: 34, bold: true }
+            - { kind: text, text: "{model}", role: muted, grow: 1 }
+        - { kind: gauge, value: load, max: 100, grow: 1 }
+        - { kind: chart, value: load, span: 90, style: area, grow: 1 }
+        - kind: row
+          gap: 10
+          children:
+            - { kind: bar, value: load, max: 100, label: "load", grow: 1 }
+            - { kind: bar, value: temp, max: 100, label: "temp", grow: 1 }
+
+  "8x2":
+    - kind: row
+      gap: 16
+      grow: 1
+      children:
+        - { kind: icon, glyph: "󰻠", size: 20, role: accent }
+        - { kind: text, text: "{load:.0f}%", role: text, size: 28, bold: true }
+        - { kind: chart, value: load, span: 150, grow: 1 }
+        - { kind: text, text: "{temp:.0f}°C", role: text }
+        - { kind: divider, vertical: true }
+        - { kind: text, text: "{memory:.1f} GB", role: muted }
+
+# ── THE ISLAND ─────────────────────────────────────────────────────────────
+#
+# `symbol` is the bar's chip and `figure` its reading; `detail` is what the
+# island opens into, at exactly `width` × `height`.
+
+island:
+  width: 356
+  height: 168
+  symbol: "󰻠"
+  figure: "{load:.0f}%"
+  detail:
+    - kind: row
+      gap: 16
+      grow: 1
+      children:
+        - { kind: gauge, value: load, max: 100, thickness: 12 }
+        - kind: column
+          gap: 6
+          grow: 1
+          children:
+            - { kind: text, text: "Processor", role: muted }
+            - { kind: text, text: "{load:.0f}%  ·  {temp:.0f}°C", role: text, size: 24, bold: true }
+            - { kind: text, text: "{model}", role: muted }
+            - { kind: bar, value: load, max: 100 }
+            - { kind: chart, value: load, span: 90, grow: 1 }

@@ -62,10 +62,18 @@ Singleton {
         { id: "clock",         name: "Clock",         bar: false,
           width: SettingsService.clockShowsDate ? 240 : 150, height: Theme.capsuleHeight },
         { id: "lyrics",        name: "Lyrics",        bar: true,  width: 300, height: 80 }
-    ]
+    ].concat(WidgetService.entries)
 
     function entry(id: string): var {
-        return root.catalogue.find(item => item.id === id) ?? root.catalogue[0]
+        const found = root.catalogue.find(item => item.id === id)
+        if (found)
+            return found
+        // A definition that has been removed since it was placed: an id of
+        // its own, sized like the rest, rather than another module's entry.
+        if (WidgetService.widgetOf(id) !== "")
+            return { id: id, name: id.slice(7), bar: true, desk: true,
+                     width: 356, height: 150 }
+        return root.catalogue[0]
     }
 
     // ── BUTTONS ─────────────────────────────────────────────────────────────
@@ -177,6 +185,8 @@ Singleton {
     // Modules with a ring face: those whose reading fills from empty to full.
     // A state or a count (the network, the bell, the date, the pending
     // updates) has nothing to fill, so it keeps its symbol in either shape.
+    // A widget defined in a file has no ring: it says what its symbol and
+    // figure are, and a ring would be a gauge of nothing.
     readonly property var ringed: ["media", "timer", "ai", "phone", "battery",
         "volume", "brightness", "stats", "pet", "bluetooth"]
 
@@ -196,6 +206,9 @@ Singleton {
     // glance, settings), in either chip shape. The assistant and the pet draw their
     // own mark instead of a glyph (`ChipFace`).
     function glyphOf(id: string): string {
+        const own = WidgetService.symbolOf(id)
+        if (own !== "")
+            return own
         switch (id) {
         case "network":
             return NetworkService.icon
@@ -238,6 +251,10 @@ Singleton {
     // Never empty, so "always show the figure" applies to every module: a
     // connection shows its name, an empty bell "0", an idle countdown "0:00".
     function valueOf(id: string): string {
+        // Empty for a definition that names no figure, which is what tells the
+        // chip to draw its symbol alone.
+        if (WidgetService.widgetOf(id) !== "")
+            return WidgetService.figureOf(id)
         switch (id) {
         case "volume":
             return AudioService.muted ? "Muted" : `${AudioService.volume}%`
@@ -299,6 +316,8 @@ Singleton {
     // Maximum width for text figures (track title, network or device name)
     // before they are elided.
     function figureLimit(id: string): int {
+        if (WidgetService.widgetOf(id) !== "")
+            return 90
         switch (id) {
         case "media":
             return 150
@@ -452,6 +471,9 @@ Singleton {
     // on the bus, pacman-contrib installed). Not a preference; placement is
     // the layout's job.
     function has(id: string): bool {
+        // A widget defined in a file is here whenever its definition is.
+        if (WidgetService.widgetOf(id) !== "")
+            return WidgetService.has(id)
         if (id === "capture")
             return CaptureService.can("grim")
         if (root.isButton(id))

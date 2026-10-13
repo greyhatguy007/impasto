@@ -1265,6 +1265,14 @@ verb_check() {
     mapfile -t files < <(find home -name '*.toml')
     python3 -c 'import sys, tomllib; [tomllib.load(open(f, "rb")) for f in sys.argv[1:]]' "${files[@]}"
     say 'syntax ok'
+
+    # A definition is checked against what its sources answer, so a typo in a
+    # template is caught here rather than drawn as a dash on the desktop.
+    # Nothing is asked of the network: `--poll` is what would.
+    section widgets
+    IMPASTO_WIDGETS="$REPO/home/.config/quickshell/widgets" \
+        python3 home/.config/quickshell/scripts/widgets.py validate
+    say 'definitions ok'
 }
 
 

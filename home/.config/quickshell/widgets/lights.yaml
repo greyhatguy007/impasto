@@ -1,0 +1,124 @@
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │   L I G H T S                                                            │
+# │   a widget defined in a file · a token out of the settings, and buttons  │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+#
+# The whole point of `${secret:…}`: this file holds no token, and is safe to
+# copy, share or commit. `wledHost` is the key Settings → Integrations already
+# writes when you point the desk at a controller, so this widget and the
+# screen-lighting integration share one address.
+#
+# The buttons below are actions, and an action is the only way a widget
+# reaches out to change something: the shell asks this desk's python to make
+# the request, so no token ever enters the QML process. `confirm: true` asks
+# for a second click within a few seconds before it fires.
+
+id: lights
+name: Lights
+
+sources:
+  state:
+    url: "http://${secret:wledHost}/json/state"
+    every: 3s
+    parse: json
+    values:
+      on: on
+      brightness: bri
+
+actions:
+  # WLED's own toggle: one request flips it, so the button never has to guess
+  # which way it is going.
+  toggle:
+    url: "http://${secret:wledHost}/json/state"
+    method: POST
+    json: { on: t }
+  brighter:
+    url: "http://${secret:wledHost}/json/state"
+    method: POST
+    json: { bri: 200 }
+  dimmer:
+    url: "http://${secret:wledHost}/json/state"
+    method: POST
+    json: { bri: 60 }
+  # A command action: same block, no url. Anything on this machine can be a
+  # button; `command` is a list of arguments and never goes through a shell.
+  off:
+    command: [wled.py, status, "${secret:wledHost}"]
+    confirm: true
+
+view:
+  "2x2":
+    - kind: column
+      gap: 6
+      align: center
+      grow: 1
+      children:
+        - { kind: icon, glyph: "󰚥", size: 30, role: text }
+        - { kind: text, text: "{brightness}", role: muted }
+        - { kind: bar, value: brightness, max: 255, grow: 1 }
+
+  "4x2":
+    - kind: row
+      gap: 12
+      grow: 1
+      children:
+        - { kind: icon, glyph: "󰚥", size: 22, role: accent }
+        - { kind: text, text: "Lights", role: text }
+        - { kind: gauge, value: brightness, max: 255, grow: 1 }
+        - { kind: button, action: dimmer, glyph: "󰃞", role: muted }
+        - { kind: button, action: toggle, label: "On / off", role: accent }
+        - { kind: button, action: off, glyph: "󰚦", role: muted, confirm: true }
+
+  "4x4":
+    - kind: column
+      gap: 14
+      grow: 1
+      children:
+        - kind: row
+          gap: 10
+          children:
+            - { kind: icon, glyph: "󰚥", size: 24, role: accent }
+            - { kind: text, text: "Lights", role: text, size: 26, bold: true, grow: 1 }
+        - { kind: gauge, value: brightness, max: 255, thickness: 12 }
+        - kind: row
+          gap: 10
+          children:
+            - { kind: button, action: dimmer, label: "Dimmer", grow: 1 }
+            - { kind: button, action: brighter, label: "Brighter", role: accent, grow: 1 }
+            - { kind: button, action: off, label: "Off", confirm: true, grow: 1 }
+
+  "8x2":
+    - kind: row
+      gap: 16
+      grow: 1
+      children:
+        - { kind: icon, glyph: "󰚥", size: 20, role: accent }
+        - { kind: text, text: "Lights", role: muted }
+        - { kind: bar, value: brightness, max: 255, label: "brightness", grow: 1 }
+        - { kind: button, action: dimmer, glyph: "󰃞" }
+        - { kind: button, action: toggle, label: "On / off", role: accent }
+        - { kind: button, action: brighter, glyph: "󰃠" }
+
+island:
+  width: 356
+  height: 150
+  symbol: "󰚥"
+  figure: "{brightness}"
+  detail:
+    - kind: column
+      gap: 12
+      grow: 1
+      children:
+        - kind: row
+          gap: 10
+          children:
+            - { kind: icon, glyph: "󰚥", size: 22, role: accent }
+            - { kind: text, text: "Lights", role: text, size: 22, bold: true, grow: 1 }
+            - { kind: text, text: "{brightness}", role: muted }
+        - { kind: bar, value: brightness, max: 255 }
+        - kind: row
+          gap: 10
+          children:
+            - { kind: button, action: dimmer, label: "Dimmer", grow: 1 }
+            - { kind: button, action: toggle, label: "On / off", role: accent, grow: 1 }
+            - { kind: button, action: brighter, label: "Brighter", grow: 1 }

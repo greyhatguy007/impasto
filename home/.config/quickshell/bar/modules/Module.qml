@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import "../../engine"
 import "../../theme"
 import "../../services"
 
@@ -18,11 +19,16 @@ import "../../services"
 // `compact` is the ring face for modules that have one
 // (`ModuleService.ringed`); otherwise the detail is built. A new module needs a
 // row here and one in the catalogue.
+//
+// A widget defined in a file is not in the map: `custom:` ids are all drawn by
+// the engine, from the detail their definition declares.
 Item {
     id: root
 
     property string moduleId: ""
     property bool compact: false
+
+    readonly property bool custom: WidgetService.widgetOf(root.moduleId) !== ""
 
     readonly property var components: ({
         clock: clockModule,
@@ -55,7 +61,18 @@ Item {
         id: holder
         anchors.fill: parent
         active: root.moduleId !== ""
-        sourceComponent: root.components[root.moduleId] ?? null
+        sourceComponent: root.custom
+            ? customModule
+            : (root.components[root.moduleId] ?? null)
+    }
+
+    Component {
+        id: customModule
+
+        CustomFace {
+            moduleId: root.moduleId
+            family: "island"
+        }
     }
 
     Component { id: clockModule;   ClockModule {} }

@@ -9,6 +9,7 @@
 
 import QtQuick
 
+import "../engine"
 import "../services"
 import "./faces"
 import "./faces/analogue"
@@ -18,6 +19,9 @@ import "./faces/analogue"
 // row; Analogue has a single registry whose faces lay themselves out at any
 // size. Notes always use NoteFace, and the spectrum is its bars in either
 // theme. Faces read their colours from the widget's resolved `ink`.
+//
+// A widget defined in a file is none of these: it carries its own view per
+// family, so `CustomFace` draws it in either theme.
 Item {
     id: root
 
@@ -34,9 +38,15 @@ Item {
     readonly property bool analogue: root.theme === "analogue"
         && root.moduleId !== "notes" && root.moduleId !== "spectrum"
 
+    // A widget defined in a file brings its own view for each family, so it is
+    // drawn by the engine rather than by one of the registries below.
+    readonly property bool custom: WidgetService.widgetOf(root.moduleId) !== ""
+
     Loader {
         anchors.fill: parent
         sourceComponent: {
+            if (root.custom)
+                return customFace
             if (root.analogue)
                 return analogue
             if (root.family === "2x2")
@@ -46,6 +56,16 @@ Item {
             if (root.family === "8x2")
                 return bands
             return wides
+        }
+    }
+
+    Component {
+        id: customFace
+        CustomFace {
+            moduleId: root.moduleId
+            family: root.family
+            ink: root.ink
+            row: root.row
         }
     }
 

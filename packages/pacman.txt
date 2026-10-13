@@ -20,6 +20,7 @@ quickshell                   # the shell: the bar, the island, the lock, notific
 awww                         # the wallpaper
 imagemagick                  # the palette board
 python                       # every backend in scripts/
+python-yaml                  # the widget engine's definitions, in scripts/widgets.py
 git                          # setup's own clones, ./setup cursors, lazy.nvim
 grim                         # the capture's photograph, and the lock screen's
 dbus                         # dbus-monitor, which hears logind about to sleep

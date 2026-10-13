@@ -37,6 +37,7 @@ singleton AiUsageService     1.0 services/AiUsageService.qml
 singleton UpdatesService     1.0 services/UpdatesService.qml
 singleton PetService         1.0 services/PetService.qml
 singleton ModuleService      1.0 services/ModuleService.qml
+singleton WidgetService      1.0 services/WidgetService.qml
 singleton ShortcutService    1.0 services/ShortcutService.qml
 singleton AccountService     1.0 services/AccountService.qml
 singleton MachineService     1.0 services/MachineService.qml
@@ -195,3 +196,4 @@ GamesBlock       1.0 bar/island/controls/GamesBlock.qml
 ControlsTray     1.0 bar/island/controls/ControlsTray.qml
 NetworkDetail    1.0 bar/island/NetworkDetail.qml
 BluetoothDetail  1.0 bar/island/BluetoothDetail.qml
+

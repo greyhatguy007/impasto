@@ -1,0 +1,13 @@
+module qs.engine
+
+CustomFace      1.0 CustomFace.qml
+EngineElement   1.0 EngineElement.qml
+ElementLoader   1.0 ElementLoader.qml
+EngineBox       1.0 EngineBox.qml
+EngineText      1.0 EngineText.qml
+EngineBar       1.0 EngineBar.qml
+EngineGauge     1.0 EngineGauge.qml
+EngineChart     1.0 EngineChart.qml
+EngineIcon      1.0 EngineIcon.qml
+EngineButton    1.0 EngineButton.qml
+EngineDivider   1.0 EngineDivider.qml

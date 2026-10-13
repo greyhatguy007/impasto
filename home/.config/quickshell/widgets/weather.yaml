@@ -1,0 +1,98 @@
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │   W E A T H E R                                                          │
+# │   a widget defined in a file · a REST endpoint, no key                   │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+#
+# open-meteo answers without an account, so this is the shape of a networked
+# widget with nothing secret in it: a `url`, an `every`, and the paths the
+# values sit at in the answer. Put your own coordinates in the URL.
+#
+# A widget with a token looks the same but names the key instead of writing
+# it: headers: { Authorization: "Bearer ${secret:somethingToken}" }, read from
+# the shell's own settings.json — where Settings → Integrations already keeps
+# every token. See widgets/lights.yaml for one.
+
+id: weather
+name: Forecast
+
+sources:
+  current:
+    url: "https://api.open-meteo.com/v1/forecast?latitude=12.97&longitude=77.59&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto"
+    every: 10m
+    parse: json
+    values:
+      temp: current.temperature_2m
+      feels: current.apparent_temperature
+      humidity: current.relative_humidity_2m
+      wind: current.wind_speed_10m
+
+history:
+  temp: 120
+
+view:
+  "2x2":
+    - kind: column
+      gap: 2
+      align: center
+      grow: 1
+      children:
+        - { kind: text, text: "{temp:.0f}°", role: text, size: 40, bold: true }
+        - { kind: text, text: "feels {feels:.0f}°", role: muted }
+
+  "4x2":
+    - kind: row
+      gap: 14
+      grow: 1
+      children:
+        - { kind: text, text: "{temp:.0f}°C", role: text, size: 32, bold: true }
+        - { kind: divider, vertical: true }
+        - kind: column
+          gap: 3
+          grow: 1
+          children:
+            - { kind: text, text: "feels like {feels:.0f}°", role: text }
+            - { kind: text, text: "{humidity:.0f}% humidity · {wind:.0f} km/h", role: muted }
+
+  "4x4":
+    - kind: column
+      gap: 12
+      grow: 1
+      children:
+        - { kind: text, text: "{temp:.0f}°C", role: text, size: 46, bold: true }
+        - { kind: text, text: "feels like {feels:.0f}°", role: muted }
+        - { kind: chart, value: temp, span: 120, style: line, grow: 1 }
+        - kind: row
+          gap: 10
+          children:
+            - { kind: bar, value: humidity, max: 100, label: "humidity", grow: 1 }
+            - { kind: bar, value: wind, max: 60, label: "wind", grow: 1 }
+
+  "8x2":
+    - kind: row
+      gap: 16
+      grow: 1
+      children:
+        - { kind: text, text: "{temp:.0f}°C", role: text, size: 30, bold: true }
+        - { kind: chart, value: temp, span: 120, grow: 1 }
+        - { kind: text, text: "feels {feels:.0f}°", role: muted }
+        - { kind: text, text: "{humidity:.0f}%", role: muted }
+        - { kind: text, text: "{wind:.0f} km/h", role: muted }
+
+island:
+  width: 356
+  height: 150
+  symbol: "󰖐"
+  figure: "{temp:.0f}°"
+  detail:
+    - kind: row
+      gap: 16
+      grow: 1
+      children:
+        - { kind: text, text: "{temp:.0f}°", role: text, size: 44, bold: true }
+        - kind: column
+          gap: 6
+          grow: 1
+          children:
+            - { kind: text, text: "feels like {feels:.0f}°", role: text }
+            - { kind: text, text: "{humidity:.0f}% humidity", role: muted }
+            - { kind: text, text: "{wind:.0f} km/h wind", role: muted }

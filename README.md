@@ -118,6 +118,29 @@ instead. The desk comes with forty paintings, in the style it is named after.
 In the terminal, the prompt is laid out like the bar, and `fa` greets you with
 fastfetch beside an animated scene drawn in pixel art out of the palette.
 
+## Widgets of your own
+
+**A widget can be a file.** One YAML definition in
+`~/.config/quickshell/widgets/` brings a widget to the wallpaper and the bar:
+where its readings come from — a command, a file, or a REST endpoint — how it
+is drawn at each of the four shapes, what its chip shows in the island, and
+what its buttons do. Save the file and the widget appears, changes or goes; the
+sources are asked on the schedule the file gives them, and nothing else in the
+shell knows it is not a widget that shipped.
+
+**Its buttons act, and the shell never holds the token.** A button names an
+action: a REST request with a method, headers and a JSON body, or a command on
+this machine. The request is made by the desk's own python, out of sight of the
+QML process, and anything secret is read from Settings → Integrations by name —
+`${secret:wledHost}` — so a definition can be shared without its keys. An
+action that takes `confirm: true` asks for a second click before it fires, and
+its answer lands on the shell's own OSD, so a widget cannot lie about what
+happened. Three definitions come with the desk: the processor, the forecast,
+and a set of lights with their buttons.
+
+The format, every element and every action key:
+[docs/shell/desktop/custom-widgets.md](docs/shell/desktop/custom-widgets.md).
+
 ## Notes and tasks
 
 <p align="center">
