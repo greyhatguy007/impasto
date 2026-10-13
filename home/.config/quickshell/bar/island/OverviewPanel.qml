@@ -52,12 +52,17 @@ ColumnLayout {
     // draw the bar's strip as empty space above every window and make equal
     // gaps look unequal.
     //
+    // Its logical size, the space `x`, `y`, `reserved` and a window's own `at`
+    // and `size` are in. A 2560-wide screen at scale 1.25 is 2048 across, and
+    // modelling the pixels would put every window on it half a screen outside
+    // the cell.
+    //
     // A window's position is its real one, in the layout every screen shares,
     // so a cell modelling the wrong monitor puts every window on it thousands
     // of pixels outside the cell — which is a workspace that reads as empty.
     function areaFor(monitor: var): var {
-        const width = monitor && monitor.width > 0 ? monitor.width : 1920
-        const height = monitor && monitor.height > 0 ? monitor.height : 1200
+        const width = monitor && monitor.logicalWidth > 0 ? monitor.logicalWidth : 1920
+        const height = monitor && monitor.logicalHeight > 0 ? monitor.logicalHeight : 1200
         const reserved = (monitor && monitor.reserved) ? monitor.reserved : [0, 0, 0, 0]
         return {
             x: (monitor ? monitor.x : 0) + reserved[0],

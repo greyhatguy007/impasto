@@ -106,6 +106,21 @@ QtObject {
     property var monitors: []
     property var binds: []
 
+    // `hyprctl monitors` reports a screen's pixel size and its scale apart,
+    // while `x`, `y` and everything the layout is arranged in are logical.
+    // Anything comparing a screen against a window's own coordinates has to
+    // measure it the same way, so each screen carries its logical size too.
+    // `(pixels / scale).round()` is what the compositor does — 2560 across at
+    // scale 1.25 is 2048 — and is the pair `monitors.py` reports, so the two
+    // ways of reading the monitors agree.
+    function withLogicalSize(monitor: var): var {
+        const scale = Number(monitor.scale) > 0 ? Number(monitor.scale) : 1
+        return Object.assign({}, monitor, {
+            logicalWidth: Math.round((Number(monitor.width) || 0) / scale),
+            logicalHeight: Math.round((Number(monitor.height) || 0) / scale)
+        })
+    }
+
     readonly property Process monitorsProcess: Process {
         command: ["hyprctl", "monitors", "-j"]
         stdout: StdioCollector {
@@ -113,8 +128,8 @@ QtObject {
                 const list = root.parseJson(text)
                 if (!Array.isArray(list))
                     return
-                root.monitors = list
-                for (const monitor of list)
+                root.monitors = list.map(root.withLogicalSize)
+                for (const monitor of root.monitors)
                     root.noteActive(monitor.name ?? "", monitor.activeWorkspace?.id ?? 0)
             }
         }
