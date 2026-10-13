@@ -35,11 +35,11 @@ actions:
   brighter:
     url: "http://${secret:wledHost}/json/state"
     method: POST
-    json: { bri: 200 }
+    json: { bri: 1 }
   dimmer:
     url: "http://${secret:wledHost}/json/state"
     method: POST
-    json: { bri: 60 }
+    json: { bri: -1 }
   # A command action: same block, no url. Anything on this machine can be a
   # button; `command` is a list of arguments and never goes through a shell.
   off:
@@ -55,7 +55,7 @@ view:
       children:
         - { kind: icon, glyph: "󰚥", size: 30, role: text }
         - { kind: text, text: "{brightness}", role: muted }
-        - { kind: bar, value: brightness, max: 255, grow: 1, thickness: 4 }
+        - { kind: bar, value: brightness, max: 255, grow: 1, thickness: 2, rounded: true, role: accent }
 
   "4x2":
     - kind: row
