@@ -16,6 +16,12 @@ import "../services"
 // place and, on release, snap to the nearest edge of another screen within
 // reach, so a free drag never leaves a one-pixel gap or an overlap. Snapping
 // only on release keeps the plate from jumping under the pointer.
+//
+// Everything here is in the size the compositor lays a screen out at — pixels
+// over scale, `logicalWidth` — because that is the space positions are written
+// in. A 2560-wide screen at scale 1.25 is 2048 across, and measuring it at
+// 2560 would leave the next screen 512 pixels away, past where the pointer
+// can reach.
 Item {
     id: root
 
@@ -34,13 +40,13 @@ Item {
     readonly property int spanX: {
         let far = 1
         for (const m of root.lit)
-            far = Math.max(far, m.x + m.width)
+            far = Math.max(far, m.x + m.logicalWidth)
         return far
     }
     readonly property int spanY: {
         let far = 1
         for (const m of root.lit)
-            far = Math.max(far, m.y + m.height)
+            far = Math.max(far, m.y + m.logicalHeight)
         return far
     }
 
@@ -89,8 +95,8 @@ Item {
             if (other.description === description)
                 continue
 
-            for (const candidate of [other.x - me.width, other.x + other.width,
-                                     other.x, other.x + other.width - me.width]) {
+            for (const candidate of [other.x - me.logicalWidth, other.x + other.logicalWidth,
+                                     other.x, other.x + other.logicalWidth - me.logicalWidth]) {
                 const gap = Math.abs(candidate - wantedX)
                 if (gap < nearestX) {
                     nearestX = gap
@@ -98,8 +104,8 @@ Item {
                 }
             }
 
-            for (const candidate of [other.y - me.height, other.y + other.height,
-                                     other.y, other.y + other.height - me.height]) {
+            for (const candidate of [other.y - me.logicalHeight, other.y + other.logicalHeight,
+                                     other.y, other.y + other.logicalHeight - me.logicalHeight]) {
                 const gap = Math.abs(candidate - wantedY)
                 if (gap < nearestY) {
                     nearestY = gap
@@ -165,8 +171,8 @@ Item {
                 // Bound to the compositor's position except while dragging.
                 x: drag.active ? x : root.originX + plate.modelData.x * root.factor
                 y: drag.active ? y : root.originY + plate.modelData.y * root.factor
-                width: plate.modelData.width * root.factor
-                height: plate.modelData.height * root.factor
+                width: plate.modelData.logicalWidth * root.factor
+                height: plate.modelData.logicalHeight * root.factor
 
                 radius: Theme.radiusSmall
                 color: plate.chosen ? Theme.accent : Theme.islandSurfaceHover

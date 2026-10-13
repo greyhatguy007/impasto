@@ -26,6 +26,7 @@ by port, so a screen keeps its settings on another connector. Quickshell's
 """
 
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -168,11 +169,27 @@ def group_modes(modes):
     ]
 
 
+def logical(size, scale):
+    """A pixel size as the size Hyprland lays the screen out at.
+
+    `(pixels / scale).round()`, which is what the compositor does; 2560 across
+    at 1.25 is 2048. Positions are written in that logical space, so a screen
+    butted against the pixel number instead leaves a gap the pointer cannot
+    cross.
+    """
+    if not scale or scale <= 0:
+        return size
+    return math.floor(size / scale + 0.5)
+
+
 def described(monitor, names):
     modes = parse_modes(monitor.get("availableModes") or [])
     width = monitor.get("width") or 0
     height = monitor.get("height") or 0
     refresh = monitor.get("refreshRate") or 0.0
+    # hyprctl reports 1.25 as 1.2000000476837158, so the scale is rounded
+    # before it is shown, compared or turned into a logical size.
+    scale = round(monitor.get("scale") or 1, 3)
     return {
         "name": monitor.get("name") or "",
         "description": monitor.get("description") or "",
@@ -188,10 +205,14 @@ def described(monitor, names):
         # rows.
         "mode": f"{width}x{height}@{refresh:.2f}" if width and height else "preferred",
         "position": f"{monitor.get('x') or 0}x{monitor.get('y') or 0}",
-        # Rounded before it is compared with the saved value: hyprctl reports
-        # 1.25 as 1.2000000476837158, which would re-apply the profile on
-        # every hotplug.
-        "scale": round(monitor.get("scale") or 1, 3),
+        # `x` and `y` above are logical, so anything arranging screens has to
+        # measure them logically too. The pixel size is kept for the modes and
+        # the resolution the settings page names.
+        "logicalWidth": logical(width, scale),
+        "logicalHeight": logical(height, scale),
+        # Rounded before it is compared with the saved value, which would
+        # otherwise re-apply the profile on every hotplug.
+        "scale": scale,
         "transform": monitor.get("transform") or 0,
         "vrr": 1 if monitor.get("vrr") else 0,
         # hyprctl reports the mirrored monitor's id, but a rule names it; the
